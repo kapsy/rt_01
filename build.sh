@@ -8,9 +8,7 @@ ASSETS_PATH=data
 # DEBUG_SWITCHES="-fno-builtin -O2 -ffast-math -ftrapping-math"
 # DEBUG_SWITCHES="-O2"
 # DEBUG_SWITCHES=""
-
 DEBUG_SWITCHES="-O3"
-# DEBUG_SWITCHES=""
 
 #### MacBook-Pro:rt_01 pitorimaikeru$ otool -L build/rt_main
 #### build/rt_main:
