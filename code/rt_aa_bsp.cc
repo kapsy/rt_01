@@ -31,7 +31,7 @@ struct triacc
     int pad5;
 };
 
-// this is really dumb, better to use triacc and _mm_set1_ps for the sake of cache.
+// NOTE: (Kapsy) This is really dumb, better to use triacc and _mm_set1_ps for the sake of cache.
 struct triacc4
 {
     // plane:
@@ -143,28 +143,14 @@ struct stackitem4_t
 // static stackitem4_t g_bspstack4[MAX_BSP_STACK_COUNT];
 // static int g_bspstack4count;
 
-
-
   //////////////////////////////////////////////////////////////////////////////
  //// Fast BSP Structs ////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
 #define MAX_BSP_NODES (1 << 25)
 #define BSP_FILENAME "test.bsp"
-//// static bsp_node *g_fastnodes;
-//// static int g_fastnodecount; // needed?
-////
-//// static triacclist_t *g_triacclist;
-//// static int g_triacclistcount = 0;
-////
-//// static int g_triacccount;
-//// static triacc *g_triaccsbase;
-//// static triacc *g_triaccat;
-////
-//// static int *g_triaccindexes;
-//// static int *g_triaccindexat;
 
-// should we just use the same struct for a file?
+// TODO: (Kapsy) Should we just use the same struct for a file?
 #pragma pack(push, 1)
 struct fastbsp_t
 {
@@ -187,19 +173,6 @@ struct fastbsp_t
 #pragma pack(pop)
 
 static fastbsp_t *g_fastbsp;
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   //////////////////////////////////////////////////////////////////////////////
  //// Tri Hit Accelaration Functions //////////////////////////////////////////
@@ -491,12 +464,10 @@ inline void
 IntersectAllTrianglesInLeaf(bsp_node *node, ray *r, hitrec *hit)
 {
 
-    // get the ref to the triaccs
-    // need a count too
-    // need to update the rays t?
-
-    // will just get the mesh bro for now anyway.
-    // man this keyboard is hard to type on.
+    // NOTE: (Kapsy) Get the ref to the triaccs.
+    // Need a count too.
+    // Need to update the rays t?
+    // Will just get the mesh for now anyway.
 
     int offset = BSP_Offset(node);
 
@@ -516,13 +487,10 @@ IntersectAllTrianglesInLeaf(bsp_node *node, ray *r, hitrec *hit)
 inline void
 IntersectAllTrianglesInLeaf4 (bsp_node *node, ray4 *r, hitrec4 *hit)
 {
-
-    // get the ref to the triaccs
-    // need a count too
-    // need to update the rays t?
-
-    // will just get the mesh bro for now anyway.
-    // man this keyboard is hard to type on.
+    // NOTE: (Kapsy) Get the ref to the triaccs.
+    // Need a count too.
+    // Need to update the rays t?
+    // Will just get the mesh for now anyway.
 
     int offset = BSP_Offset(node);
 
@@ -540,18 +508,14 @@ IntersectAllTrianglesInLeaf4 (bsp_node *node, ray4 *r, hitrec4 *hit)
 }
 
 
-//static bsp_node *bsptree;
-//static int bsptreecount; // needed?
-
-// single ray implementation
-// going to try this with a test ray and test bsp and see how it works....
-// interestingly, they say "object" so I guess we could go with object for now.
+// NOTE: (Kapsy) Single ray implementation.
+// Going to try this with a test ray and test bsp and see how it works...
+// Interestingly, they say "object" so I guess we could go with object for now.
 static void
 TraverseTris (ray *r, rect3 *aabb, hitrec *hit, fastbsp_t *fastbsp)
 {
     // NOTE: (Kapsy) Current stack items
     // Should make a pointer to the first node instead of doing this.
-    //
     bsp_node *node = P32ToP (fastbsp->nodes, bsp_node) + 1;
 
     float tnear = EPSILON;
@@ -661,26 +625,25 @@ TraverseTris (ray *r, rect3 *aabb, hitrec *hit, fastbsp_t *fastbsp)
 
 }
 
-// issue is that hit far is not being set when it should be.
+// TODO: (Kapsy) Issue is that hit far is not being set when it should be.
 static void
 TraverseTris4 (ray4 *r, rect3 *aabb, hitrec4 *hit, m128 outmask, v3 signs, fastbsp_t *fastbsp)
 {
     // NOTE: (Kapsy) Current stack items
     // Should make a pointer to the first node instead of doing this.
     // All of this stuff should be stored on the object, or the meta object struct.
-    //bsp_node *node = fastbsp->nodes + 1;
+    // bsp_node *node = fastbsp->nodes + 1;
     bsp_node *node = P32ToP (fastbsp->nodes, bsp_node) + 1;
-
 
     m128 tnear = _mm_set1_ps (EPSILON); // should be thit, if we start using multiple boxes?
     m128 tfar = _mm_set1_ps (MAXFLOAT);
 
-    // confirm all rays have matching direction here?
-    // for now will assume that all rays have the same direction signs at this point.
+    // TODO: (Kapsy) Confirm all rays have matching direction here?
+    // For now will assume that all rays have the same direction signs at this point.
     // yeah, assume the check happens before here, and rays that don't comply are invalidated, and a single traversal is started.
-    // actually will need to ignore ?
+    // Actually will need to ignore?
 
-        //m128 outmask = _mm_set1_ps (0.f);
+    // m128 outmask = _mm_set1_ps (0.f);
     // NOTE: (Kapsy) Clip the line segment to the bounding box.
     {
         m128 tmin;
@@ -690,15 +653,15 @@ TraverseTris4 (ray4 *r, rect3 *aabb, hitrec4 *hit, m128 outmask, v3 signs, fastb
         m128 tzmin;
         m128 tzmax;
 
-        // cant do this
+        // Cant do this.
         //// v3 invdir = 1.f/r->dir[0];
         //
         v34 invdir4 = _mm_set1_ps(1.f)/r->dir;
 
-        // just checking first for now, should assert if signs are different howeever.
+        // Just checking first for now, should assert if signs are different however.
 
-        // this is breaking things.
-        // already have this info, need a way of passing.
+        // This is breaking things.
+        // Already have this info, need a way of passing.
         // int signx = (invdir4.x[0] < 0);
         // int signy = (invdir4.y[0] < 0);
         // int signz = (invdir4.z[0] < 0);
@@ -775,9 +738,9 @@ TraverseTris4 (ray4 *r, rect3 *aabb, hitrec4 *hit, m128 outmask, v3 signs, fastb
     // get the dim for the packet here.
 
 
-            // okay geddit now. all rays in the packet should be valid at this point.
-            // only when tnear < tfar, or they miss the bounding box entirely do they get invalidated.
-            // from which point they stay that way for the remainder of the traversal only
+    // NOTE: (Kapsy) Okay geddit now. all rays in the packet should be valid at this point.
+    // Only when tnear < tfar, or they miss the bounding box entirely do they get invalidated.
+    // From which point they stay that way for the remainder of the traversal only
 
     int bspstack4count = 0;
     stackitem4_t bspstack4[MAX_BSP_STACK_COUNT];
@@ -788,15 +751,15 @@ TraverseTris4 (ray4 *r, rect3 *aabb, hitrec4 *hit, m128 outmask, v3 signs, fastb
         {
             int dim = BSP_Dim(node);
 
-            // just using first element for now.
-            //float dimdir = r->dir.e[dim][0];
-            // this should work, but could make get back/front more efficient by using int???
-            // what we actually want is int 1 for +ve and 0 for -ve
+            // Just using first element for now.
+            // float dimdir = r->dir.e[dim][0];
+            // This should work, but could make get back/front more efficient by using int???
+            // What we actually want is int 1 for +ve and 0 for -ve
             float dimdir = -2*signs.e[dim] + 1;
 
             // NOTE: (Kapsy) Keep traversing until the next leaf.
             // Pretty sure this means our dir has to be UNIT!!!
-            //float d = (node->inner.split - r->orig.e[dim])/r->dir.e[dim];
+            // float d = (node->inner.split - r->orig.e[dim])/r->dir.e[dim];
 
             m128 d = (_mm_set1_ps (node->inner.split) - r->orig.e[dim])/r->dir.e[dim];
 
@@ -819,14 +782,14 @@ TraverseTris4 (ray4 *r, rect3 *aabb, hitrec4 *hit, m128 outmask, v3 signs, fastb
             {
                 // Case 3: Traverse both sides in turn
                 bsp_node *backchild = GetBackChild (node, dimdir);
-                // these _shouldn't affect active, as tnear would be greater than far anyway.
-                // so in the case where d is max, near will still be after far
+                // These _shouldn't affect active, as tnear would be greater than far anyway.
+                // So in the case where d is max, near will still be after far.
                 PushStack4 (bspstack4, bspstack4count, backchild, Max4 (d, tnear), tfar);
 
                 node = GetFrontChild (node, dimdir);
 
-                // likewise, if near is > far then that relationship won't change here.
-                // okay, so this is always going to set all to tfar!?????????????????????????????????????????????????
+                // Likewise, if near is > far then that relationship won't change here.
+                // Okay, so this is always going to set all to tfar???
                 tfar = Min4 (d, tfar);
             }
         }
@@ -834,13 +797,10 @@ TraverseTris4 (ray4 *r, rect3 *aabb, hitrec4 *hit, m128 outmask, v3 signs, fastb
         // NOTE: (Kapsy) We now have a leaf.
         IntersectAllTrianglesInLeaf4 (node, r, hit);
 
-        // just dumping here for now.
-       ////j  m128 active = (tnear < tfar);
-       ////j  m128 activeinv = _mm_xor_ps (active, _mm_set1_epi32 (0xffffffff));
         // NOTE: (Kapsy) Early ray termination.
-       if (AllBitsSet4 (_mm_or_ps((hit->dist <= tfar), outmask)))
+        if (AllBitsSet4 (_mm_or_ps((hit->dist <= tfar), outmask)))
         // Early term is not the cause here.
-        //if (AllBitsSet4 (hit->dist <= tfar))
+        // if (AllBitsSet4 (hit->dist <= tfar))
         {
             bspstack4count = 0;
             return;
@@ -911,9 +871,6 @@ TraverseTest()
 static void
 DebugPrintFastBSP(fastbsp_t *fastbsp, int count)
 {
-    //printf("DebugPrintFastBSP\n");
-    //fflush(0);
-
     bsp_node *basenode = P32ToP (fastbsp->nodes, bsp_node);
 
     // Ignore the first.
@@ -957,69 +914,6 @@ LoadFastBSP (fastbsp_t *fastbsp)
         g_fastbsp = (fastbsp_t *) PoolAlloc (&g_bspmempool, filesize + CACHELINE_SIZE, CACHELINE_SIZE);
         read = fread ((void *) g_fastbsp, filesize, 1, file);
 
-
-
-
-////        written = fwrite (g_bspmempool.base, poolsize, 1, file);
-////
-////
-////
-////        // NOTE: (Kapsy) Read in the header;
-////        size_t headersize = sizeof (*fastbsp);
-////        read = fread ((void *) fastbsp, headersize, 1, file);
-////        Assert (read == 1);
-////
-////        // seek to data in file
-////        // pretty sure this happens already with the seek?
-////// seekres = fseek (file, headersize, SEEK_SET);
-////
-////// char *dataat;
-////
-////        // NOTE: (Kapsy) Read the data.
-////        size_t nodessize = fastbsp->nodecount*sizeof (bsp_node);
-////        fastbsp->nodes = (bsp_node *) PoolAlloc (nodessize, CACHELINE_SIZE);
-////        //// fastbsp->nodecount = 1;
-////
-////        //// bsp_node *fastnode = fastbsp->nodes + fastbsp->nodecount++;
-////        //// SetBSPType(fastnode, NodeTypeInner);
-////        //// SetBSPDim(fastnode, makenode->dim);
-////        read = fread ((void *) fastbsp->nodes, nodessize, 1, file);
-////        Assert (read == 1);
-////
-////        // problem is here all our node offsets point to triacclistss
-////        // so it's probably easier to just allocate all required things with one pool and write out.
-////
-////
-////
-////        // wonder if we're going to get differing in size errors ? shouldn't do
-////        size_t triacclistsize = fastbsp->triacclistcount*sizeof (triacclist_t);
-////        fastbsp->triacclist = (triacclist_t *) PoolAlloc (triacclistsize, CACHELINE_SIZE);
-////        read = fread ((void *)fastbsp->triacclist, triacclistsize, 1, file);
-////        Assert (read == 1);
-////
-////        size_t triaccsize = fastbsp->triacccount*sizeof (triacc);
-////        fastbsp->triaccsbase = (triacc *) PoolAlloc (triaccsize, CACHELINE_SIZE);
-////        read = fread (fastbsp->triaccsbase, triaccsize, 1, file);
-////        Assert (read == 1);
-////
-////        // NOTE: (Kapsy) Convert the list's relative pointers to actual pointers.
-////        triacc *triaccbase = fastbsp->triaccsbase;
-////        for (int i=0 ; i<fastbsp->triacclistcount ; i++)
-////        {
-////            triacclist_t *triacclist = fastbsp->triacclist + i;
-////            triacc *triaccs = triaccbase + (unsigned int)((unsigned long)triacclist->triaccs);
-////            triacclist->triaccs = triaccs;
-////        }
-////
-////        //// size_t triaccindexessize = fastbsp->triacccount*sizeof (int);
-////        //// fastbsp->triaccindexes = (int *) malloc (triaccindexessize);
-////        //// read = fread (fastbsp->triaccindexes, triaccindexessize, 1, file);
-////        //// Assert (read == 1);
-////
-////    //fastbsp->triaccat = fastbsp->triaccsbase;
-////
-//////DebugPrintFastBSP(fastbsp, 128);
-
         fclose (file);
 
         result = true;
@@ -1039,75 +933,19 @@ SaveFastBSP (fastbsp_t *fastbsp)
     {
         size_t written = 0;
 
-        // what we're going to do now is just write the whole pool in as is.
-        // the only thing to do is to fix up the pointers (fastbsp->triaccsbase etc)
-        // might be just as easy to make them relative.
+        // NOTE: (Kapsy) What we're going to do now is just write the whole pool in as is.
+        // The only thing to do is to fix up the pointers (fastbsp->triaccsbase etc)
+        // Might be just as easy to make them relative.
 
-        // need to make sure that when we load back in that our pool is also cache size aligned.
-        // this isn't perfect, but it should work.
-        // might want to assert on that!
+        // Need to make sure that when we load back in that our pool is also cache size aligned.
+        // This isn't perfect, but it should work.
+        // Might want to assert on that!
 
         uint64_t poolsize = g_bspmempool.at - g_bspmempool.base;
         written = fwrite (g_bspmempool.base, poolsize, 1, file);
 
-
-////             triacc *triaccrelative = (triacc *)(triacclist->triaccs - triaccbase);
-//// 
-//// 
-//// 
-////     bsp_node *nodesrelative = fastbsp->nodes - &fastbsp->nodes - ;
-//// 
-//// 
-////     triacclist_t *triacclist;
-////     triacc *triaccsbase;
-//// 
-//// 
-//// 
-//// 
-//// 
-//// 
-////         // write the header
-////         size_t headersize = sizeof (*fastbsp);
-////         written = fwrite (fastbsp, headersize, 1, file);
-////         Assert (written == 1);
-//// 
-////         // write the data
-////         size_t nodessize = fastbsp->nodecount*sizeof (bsp_node);
-////         written = fwrite (fastbsp->nodes, nodessize, 1, file);
-////         Assert (written == 1);
-//// 
-////         // have to
-////         // make a copy of the triacc list
-////         // iterate all lists
-////         // convert pointer to relative
-////         // write _that_ list
-////         // free it
-////         // NOTE: (Kapsy) Make all triacc pointers relative.
-////         // Could make these relative pointers, but we then need a fixed data block size...
-////         size_t triacclistsize = fastbsp->triacclistcount*sizeof (triacclist_t);
-////         triacclist_t *triacclistcopy = (triacclist_t *) malloc (triacclistsize);
-////         memcpy ((void *) triacclistcopy, fastbsp->triacclist, triacclistsize);
-////         triacc *triaccbase = fastbsp->triaccsbase;
-////         for (int i=0 ; i<fastbsp->triacclistcount ; i++)
-////         {
-////             triacclist_t *triacclist = triacclistcopy + i;
-////             // should be int if we do it this way
-////             //
-////             triacc *triaccrelative = (triacc *)(triacclist->triaccs - triaccbase);
-////             triacclist->triaccs = triaccrelative;
-////         }
-//// 
-////         written = fwrite ((void *) triacclistcopy, triacclistsize, 1, file);
-////         Assert (written == 1);
-////         free ((void *) triacclistcopy);
-//// 
-////         size_t triaccsize = fastbsp->triacccount*sizeof (triacc);
-////         written = fwrite (fastbsp->triaccsbase, triaccsize, 1, file);
-////         Assert (written == 1);
-
         fclose (file);
     }
-
 }
 
 
@@ -1352,8 +1190,8 @@ MakeBSPNode(object_t *object, makenode_t *node, int depth)
     // VR: right bounding box.
 
     // NOTE: (Kapsy) Cost of intersection, cost traversal.
-    ///float cisec = 1.f;
-    ///float ctrav = 3.f;
+    // float cisec = 1.f;
+    // float ctrav = 3.f;
 
     float cisec = 1.f;
     float ctrav = 3.1f;
@@ -1370,7 +1208,6 @@ MakeBSPNode(object_t *object, makenode_t *node, int depth)
     float saV = SurfaceArea (V);
     float saVinv = 1.f/saV;
 
-
     int NLps = 0; // pending starts
         // NOTE: (Kapsy) Iterate all edges, find the best cost.
     for (int i=0 ; i<edgecount ; i++)
@@ -1384,9 +1221,8 @@ MakeBSPNode(object_t *object, makenode_t *node, int depth)
         //// else if (e->type == EdgeTypeEnd)
         ////     NR--;
 
-
-        // this seems to work, but really has no impact
-        // more pressingly, we're not getting enough empty nodes.
+        // This seems to work, but really has no impact.
+        // More pressingly, we're not getting enough empty nodes.
         if (e->type == EdgeTypeStart)
         {
             //NL++;
@@ -1399,9 +1235,6 @@ MakeBSPNode(object_t *object, makenode_t *node, int depth)
             NL++;
             NLps--;
         }
-
-
-
 
         rect3 VL = V;
         rect3 VR = V;
@@ -1419,7 +1252,6 @@ MakeBSPNode(object_t *object, makenode_t *node, int depth)
 
         float costsplit = ctrav + cisec*(pVLV*NLc + pVRV*NR);
 
-
         // NOTE: (Kapsy) Surprisingly, this only makes minimal difference.
         if ((NLc == 0) || (NR == 0))
         {
@@ -1435,8 +1267,6 @@ MakeBSPNode(object_t *object, makenode_t *node, int depth)
             costbestNR = NR;
         }
     }
-
-
 
     float costleaf = NV*cisec;
 
@@ -1513,7 +1343,6 @@ MakeBSPNode(object_t *object, makenode_t *node, int depth)
         rightlistat++;
     }
     DeleteDoubles(&rightchild->trilist);
-
 
     // NOTE: (Kapsy) Setup the current node as inner.
     node->type = NodeTypeInner;
@@ -1644,7 +1473,7 @@ PopSlowNode (slownodestack_t *stack)
     return (node);
 }
 
-// okay, easiest thing for now is to store the depth with each node.
+// NOTE: (Kapsy) Okay, easiest thing for now is to store the depth with each node.
 static void
 CollateSlowBSPDebugInfo(makenode_t *node)
 {
@@ -1665,7 +1494,7 @@ CollateSlowBSPDebugInfo(makenode_t *node)
 
         if (node->type == NodeTypeLeaf)
         {
-            //printf ("Leaf: t:%d d:%d\n", node->trilist.count, depth);
+            // printf ("Leaf: t:%d d:%d\n", node->trilist.count, depth);
 
             Assert (depth <= MAX_BSP_DEPTH);
             g_bspstat_ND[depth]++;
@@ -1686,7 +1515,7 @@ CollateSlowBSPDebugInfo(makenode_t *node)
         }
         else if (node->type == NodeTypeInner)
         {
-            //printf ("Inner: d: %d\n", depth);
+            // printf ("Inner: d: %d\n", depth);
 
             depth++;
 
@@ -1745,7 +1574,6 @@ PopCreateNodePair (createnodepairstack_t *stack)
     createnodepair_t *pair = stack->pairs + --stack->count;
     return (pair);
 }
-
 
 static void
 CreateFastBSPFromSlow (fastbsp_t *fastbsp, object_t *object, makenode_t *slownode, bsp_node *fastnode)
@@ -1834,75 +1662,4 @@ CreateFastBSPFromSlow (fastbsp_t *fastbsp, object_t *object, makenode_t *slownod
         }
     }
 }
-
-
-
-
-//// // TODO: (Kapsy) Need to re-jig this, otherwise the stack can't handle it for large models.
-//// static int fbspcounter =0;
-//// static void
-//// MakeFastBSP(object_t *object, makenode_t *makenode, bsp_node *fastnode, int depth)
-//// {
-////     // printf("MakeFastBSP %d d:%d t:%d c:%d\n", fbspcounter++, depth, makenode->type, makenode->trilist.count);
-//// 
-////     ///fflush(0);
-////     if (makenode->type == NodeTypeLeaf)
-////     {
-////         // NOTE: (Kapsy) Assign/make tri acc structures.
-//// 
-////         rect3 V = makenode->V;
-//// 
-////         triacclist_t *list = g_triacclist + g_triacclistcount++;
-////         list->triaccs = g_triaccat;
-////         list->count = 0;
-//// 
-////         triacc *triaccat = list->triaccs;
-////         for (int i=0 ; i<makenode->trilist.count ; i++)
-////         {
-////             int triindex = makenode->trilist.indexes[i];
-////             CreateTriacc(object, triindex, triaccat);
-//// 
-////             triaccat++;
-////             list->count++;
-////         }
-//// 
-////         g_triaccat += list->count;
-////         Assert(g_triaccat <= (g_triaccsbase + g_triacccount));
-//// 
-////         int64_t bspoffset = ((char *)list - (char *)fastnode);
-////         Assert(llabs(bspoffset) < (int)0x7fffffff);
-////         Assert((bspoffset & 0x3) == 0);
-////         SetBSPOffset (fastnode, (int)bspoffset);
-//// 
-////         if (g_makenodepaircount)
-////         {
-////             makenodepair_t *pair = PopMakeNodePair();
-////             MakeFastBSP(object, pair->makenode, pair->fastnode, (depth - 1));
-////         }
-////     }
-////     else if (makenode->type == NodeTypeInner)
-////     {
-////         // NOTE: (Kapsy) We need to add fast nodes contiguously.
-////         makenode_t *leftmakenode = makenode->leftchild;
-////         makenode_t *rightmakenode = makenode->rightchild;
-//// 
-////         Assert (g_fastnodecount < MAX_BSP_NODES);
-////         bsp_node *leftfastnode = g_fastnodes + g_fastnodecount++;
-////         SetBSPType(leftfastnode, leftmakenode->type);
-////         SetBSPDim(leftfastnode, leftmakenode->dim);
-//// 
-////         Assert (g_fastnodecount < MAX_BSP_NODES);
-////         bsp_node *rightfastnode = g_fastnodes + g_fastnodecount++;
-////         SetBSPType(rightfastnode, rightmakenode->type);
-////         SetBSPDim(rightfastnode, rightmakenode->dim);
-//// 
-////         int leftfastchildoffset = (int)((char *)leftfastnode - (char *)fastnode);
-////         SetBSPOffset(fastnode, leftfastchildoffset);
-////         fastnode->inner.split = makenode->split;
-//// 
-////         PushMakeNodePair(rightmakenode, rightfastnode);
-//// 
-////         MakeFastBSP(object, leftmakenode, leftfastnode, (depth + 1));
-////     }
-//// }
 
