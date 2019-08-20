@@ -2,7 +2,7 @@
 
 A stochastic path tracer built for my own learning.
 
-Much of the code is hard-wired to render a Mercedes Benz 300sl animation. You can view it [here](https://www.youtube.com/1234).
+Much of the code is hard-wired to render a Mercedes Benz 300sl animation. You can view it [here](https://youtu.be/Jdtjn-Yh2S0).
 
 Features:
 - Normal mapping, displacement to normals
