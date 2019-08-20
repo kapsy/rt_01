@@ -1,0 +1,3317 @@
+
+
+---
+
+Render time change from moving Cramer tuv calc to inside the det check.
+
+Render time: 18.467907s
+Triangles: 358
+Primary rays: 2073600
+Secondary rays: 2065792
+Rays: 4139392
+Ray triangle tests: 1481902336
+Ray triangle intersections: 536111
+Triangle hit ratio: 0.000362
+
+
+Render time: 13.386496s
+Triangles: 358
+Primary rays: 2073600
+Secondary rays: 2065792
+Rays: 4139392
+Ray triangle tests: 1481902336
+Ray triangle intersections: 536111
+Triangle hit ratio: 0.000362
+
+---
+
+Wald Paper
+
+Okay, a lot to take in.
+
+x Need to create a test scene for this throughout. Will use teapot.
+
+> First, replace the intersection algorithm, and see if we can achieve the 2x claimed speedup.
+
+> Then straight onto the BSP tree.
+
+> Then packets.
+
+> And finally MP support.
+
+Okay, up to page 195, but don’t need to look at that for a long while. Will have a look when and if we get to shading.
+
+Furthermore, if all BSP nodes are stored in one contiguous array (with child nodes always stored after their parent nodes), this single pointer can be expressed as an offset relative to the current node. As this offset is positive, we can use its sign bit for storing the flag that specifies the type of node. Finally, having the nodes stored in an array guarantees that the offset is a multiple of 8 (the node size), so its lower two bits can be safely used for storing the splitting axis.
+
+Just shows how much you can squeeze out. Will have to try this with V.
+
+---
+
+  //////////////////////////////////////////////////////////////////////////////
+ //// Benchmarks //////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+TEAPOT, NAIVE MT INTERSECTION, NAIVE AABB IMPLEMENTATION
+
+Render time: 4.994494s
+Triangles: 0
+Primary rays: 129600
+Secondary rays: 0
+Total Rays: 129600
+Rays/s: 25948.574570
+Ray triangle tests: 694089396
+Ray triangle intersections: 23357
+Triangle hit ratio: 0.000034
+Bounding box tests: 129600
+Bounding box intersections: 0
+Bounding box hit ratio: 0.000000
+
+SECOND ATTEMPT:
+
+Render time: 5.100011s
+Triangles: 0
+Primary rays: 129600
+Secondary rays: 0
+Total Rays: 129600
+Rays/s: 25411.709896
+Ray triangle tests: 694089396
+Ray triangle intersections: 46191
+Triangle hit ratio: 0.000067
+Bounding box tests: 129600
+Bounding box intersections: 0
+Bounding box hit ratio: 0.000000
+
+WALD INTERSECTION - FIRST WORKING IMPLEMENTATION
+
+Render time: 5.114919s
+Triangles: 0
+Primary rays: 129600
+Secondary rays: 0
+Total Rays: 129600
+Rays/s: 25337.644643
+Ray triangle tests: 694089396
+Ray triangle intersections: 22857
+Triangle hit ratio: 0.000033
+Bounding box tests: 129600
+Bounding box intersections: 0
+Bounding box hit ratio: 0.000000
+
+WALD INTERSECTION - WITH RUDIMENTARY SIMD IMPLEMENTATION
+
+rm: ./temp/*: No such file or directory
+Render time: 1.728896s
+Triangles: 0
+Primary rays: 134400
+Secondary rays: 0
+Total Rays: 134400
+Rays/s: 77737.469460
+Ray triangle tests: 179869404
+Ray triangle intersections: 24046
+Triangle hit ratio: 0.000134
+Bounding box tests: 33600
+Bounding box intersections: 0
+Bounding box hit ratio: 0.000000
+
+real	0m1.736s
+user	0m1.724s
+sys	0m0.009s
+
+WALD INTERSECTION - NO BOUNDING BOX
+
+Render time: 8.755523s
+Triangles: 0
+Primary rays: 129600
+Secondary rays: 0
+Total Rays: 129600
+Rays/s: 14802.085495
+Ray triangle tests: 1223164800
+Ray triangle intersections: 22857
+Triangle hit ratio: 0.000019
+Bounding box tests: 0
+Bounding box intersections: 0
+Bounding box hit ratio: nan
+
+MOLLER TRUMBOR - NO BOUNDING BOX
+
+Render time: 8.908202s
+Triangles: 0
+Primary rays: 129600
+Secondary rays: 0
+Total Rays: 129600
+Rays/s: 14548.390349
+Ray triangle tests: 1223164800
+Ray triangle intersections: 46191
+Triangle hit ratio: 0.000038
+Bounding box tests: 0
+Bounding box intersections: 0
+Bounding box hit ratio: nan
+
+So really not much difference
+Thing is though, Think we're hitting back faces with WALD. Wonder what would happen if we turn that off.
+
+So my thoughts are this.
+
+If we switch to a vertex list style thing, per for MT will drop way off, but Wald should be okay.
+
+Should be able to get a speedup with WALD if we can figure out how to early out for backward facing tris too.
+
+// wald, HD
+Render time: 79.993134s
+Triangles: 0
+Primary rays: 2073600
+Secondary rays: 0
+Total Rays: 2073600
+Rays/s: 25922.224775
+Ray triangle tests: 11090924130
+Ray triangle intersections: 365683
+Triangle hit ratio: 0.000033
+Bounding box tests: 2073600
+Bounding box intersections: 0
+Bounding box hit ratio: 0.000000
+
+// MT, HD
+Render time: 78.921841s
+Triangles: 0
+Primary rays: 2073600
+Secondary rays: 0
+Total Rays: 2073600
+Rays/s: 26274.095659
+Ray triangle tests: 11090924130
+Ray triangle intersections: 365417
+Triangle hit ratio: 0.000033
+Bounding box tests: 2073600
+Bounding box intersections: 0
+Bounding box hit ratio: 0.000000
+
+So I would conclude that there is no diff because they are both using cache efficient memory layout, and the amount of processing done is about the same.
+So not sure what else can be done, other than using smaller data structures for Wald.
+
+USING triacc4 ACCELERATION STRUCTURE
+
+Render time: 1.741765s
+Triangles: 0
+Primary rays: 134400
+Secondary rays: 0
+Total Rays: 134400
+Rays/s: 77163.107537
+Ray triangle tests: 182568672
+Ray triangle intersections: 24046
+Triangle hit ratio: 0.000132
+Bounding box tests: 33600
+Bounding box intersections: 0
+Bounding box hit ratio: 0.000000
+
+---
+
+Okay, next steps are:
+
+x Render normals
+    Don't want to chase this too hard. I think the idea is that you get the precomped normals and decide if you want to draw or not after the hit.
+    Okay, tried a simple early out, didn't work that well, was twice as slow, showing we are compute bound.
+x SIMD
+    x Fix bounding bug.
+    > SIMDify the whole line, not just the color function.
+          x AABB tests
+          x Get ray - Going to leave this. At most we'll get a few m/s speedup. This is not where the bottleneck is!
+
+> Then straight onto accel structures.
+
+---
+
+Okay, so embarassingly, I have been thinking about O + tD wrong. D is not absolute. It is always relative to O. Otherwise it would scale from the origin.
+
+---
+
+For this kind of traversal, BSP trees behave best if they have large voxels of
+empty space as close to the root node as possible, as large “empty space”
+allows for traversing a ray over a large distance at small cost.
+
+Thoughts on the sah bsp thing.
+Round objects like the teapot are actually pretty hard.
+If we had a box like object, we would ideally have all of it's (flat) surfaces enclosed in a voxel.
+Otherwise we would be comping extra triangles that we just don't need to.
+
+Need a low poly test model.
+Should be able to shady tris with a color based on bounding box.
+
+Okay, have an issue when lookfrom.x and lookat.x is exactly on 0.
+
+Should be exceedingly rare, although perhaps not so rare if we start on axis like that.
+
+So should deal with it now.
+
+X Also, this did not make a difference. Need to confirm that the traversal order is correct.
+        if (hit->dist <= tfar)
+        confirmed ok.
+
+Can't find any mention of it, but going to assume that the dimension is always cycled, as that's what the Wald diagram does. X->Y->Z->X...
+
+FOR CALC'ING VERTEX NORMALS:
+While reading the mesh, make a list of faces that each vertex uses. This can be done without slowing down the loading: Each time a vertex is used to create a face, this face is added to a list of faces for that vertex. Once the object is loaded, you have for each vertex a list of faces that use that particular vertex. Calculating the vertex normal is now a matter of summing the normals of these faces and normalizing. This gives you the vertex normals virtually for free. The actual implementation is 'interesting' (as in 'challenging'): It requires an array of pointers to primitives per vertex, so the array declaration looks as follows:
+
+---
+
+"Initially I used a similar simplification for triangles. You can check the new box­triangle intersection in scene.cpp, I used the version made by Tomas Akenine­M ller (the same guy that worked with Trumbore on ray/triangle intersections), as it's fast and short. The effect on the performance of the ray tracer is dramatic. Without the improved box/primitive intersection code, each ray was checked against 22 primitives on average. With the new code, this figure went down to 6.7. VTune made the impact even clearer: Without proper box/primitive intersection code, the intersection tests took 80% of the clock cycles (compared to 15% for the traversal code). With the new code, the same amount of time is spent inside the intersection code as in the traversal code."
+
+So I don't get this either.
+
+You can check out the actual implementation in the sample ray tracer project. I tried some things to speed up the code: The candidate split plane positions are first stored in a linked list. During this first loop, duplicate positions are eliminated, and the positions are sorted.
+In a second loop, the left and right voxel primitive counts are calculated for each split plane position. This is where the sorted list comes in handy; as we are walking from left to right, we can tag primitives that are to the left of the current plane, so we can skip them in the next iteration.
+
+NOT SURE WHAT THIS MEANS!
+The generated tree is quite good however. It can be improved, consider this work in progress: Right now, triangles are not clipped to the parent voxel before their extends are determined. Doing this clipping allows split planes to be situated at the exact
+position where a triangle leaves a node. This is not a very difficult extension, but it will make the tree compiler even slower.
+
+a_Prims is just the number of prims or tris.
+real Cleaf = a_Prims * 1.0f;
+
+---
+
+so, as a plan, going to do what he does.
+
+> Create a linked list of potential split pos's. Sort, and then get the counts. Find the axis (longest should be best).
+
+Going to do the naive thing of including triangle that are split on both sides, but I don't really get what is best here. Need to research more.
+I'm guessing that this is the bounding box approach???
+
+This function is continuous except for the split plane positions at which the numbers NL and NR change (also see [Havran01]). These are exactly the positions where either a triangle side ends (i.e. at a vertex), or where a triangle side pierces the side of a voxel [Havran01, Hurley02]).
+
+Should track down these two papers.
+
+// This probably explains best.
+// So this is essentially what we're doing...
+One simple choice of split candidates is to use the 6 planes defining the triangle’s AABB B(t). Though this is easiest to code and
+fastest to build, it is also inaccurate, as it may sort triangles into voxels that the triangle itself does not actually overlap. The intuitive fix
+of performing some a-posterior triangle-voxel overlap test does not
+work, either: For small voxels it frequently happens that the voxel
+is completely enclosed in B(t), and thus no split candidate could be
+found at all. The accurate way of determining the candidate planes
+thus is to first clip the triangle t to the voxel V , and use the sides
+of the clipped triangle’s AABB B(t ∩ V ) (also see [9, 6]). As this
+is significantly more accurate then the AABB, the candidates such
+produced are also often called “perfect splits” (in [7], this technique
+is reported to give an average speedup of 9–35%).
+
+OKAY, need to get something up and running, do some solid programming here... This is going to be amazing.
+
+Interesting:
+
+This is a gross simplification, and tends to overestimate the correct
+cost, as TL and TR are likely to be further subdivided, and will
+thus have lower cost than assumed. Nevertheless, in practice this
+approximation works well, and – though many theoretically better
+approximation have been tried – so far no consistently better approximation could be found.
+
+---
+
+Think that this best answers:
+
+Quite generally, determining NL and NR via a standard trianglevoxel overlap test may result in sorting triangles into a voxel even
+if they overlap in only a line or a point, and triangles lying in in the
+plane p may be sorted into both halves. Both cases are not actually
+wrong, but inefficient. Thus, the most exact solution requires to
+actually split T into three sets, TL, TR, TP , the triangles having
+non-zero overlap for VL \ p, VR \ p, and p
+
+Anyway, going to get _something_ working.
+Going to do the naive thing for now:
+- Bounding boxes
+- Split along longest axis
+- Ignore ON the splitting plane for now
+- Color children by node.
+- NOT going to zero base everything!!!!
+
+---
+
+Okay, going to make a simple split. Make the makenode_ts manually. See if we still get the issue.
+
+Pretty sure the issue in the way we construct our flat tree.
+
+Yep, even with a simple single split we're still endless looping.
+
+Maybe this is a good indication to go to Xcode. LLDB doesn't really cut it here.
+
+It's working. 1 min to render entire merc animation. 175 frames @960 res.
+
+---
+
+So obviously heaps to do, but in priority order:
+
+x Get rays/sec stats happening again.
+
+> Multi threaded. Because why not. Will just copy V code to save time.
+      Need output buffer.
+      Figure out best way to split screen. Big horizontal strips are probably best.
+
+- Swift? Need to press on with this. Yes, I think we can make this happen but need to make a start.
+      Doesn't need to be as fast as C++, just needs to work.
+
+- OBJ loader, ref to triangle strips, materials.
+      This is quite big, should get onto it asap.
+      Not binary, so we have to write a parser...
+
+- SIMD??? Might be best to leave if it's fast enough, not that I don't want to, just that it's not as high pri as others.
+
+- Our SAH is creating bad splits and doubles, they need to be removed, but this is low, it's doing it's job for now.
+
+---
+
+FIRST SAH STATS WITH 10K TEAPOT:
+
+Setup Fast BSP Tree Complete
+Render time: 0.232465s
+Triangles: 9438
+Primary rays: 518400
+Secondary rays: 0
+Total Rays: 518400
+Rays/s: 2230013.120255
+Ray triangle tests: 518400
+Ray triangle intersections: 94019
+Triangle hit ratio: 0.181364
+
+I'll take that, yes.
+Tri hit ratio waaaay up too.
+Need to add some more stats around the BSP tree, but will leave at this for now.
+Most interested in big speedup wins at the moment.
+
+---
+
+300SL RETINA:
+
+Setup Fast BSP Tree Complete
+Render time: 4.490292s
+Triangles: 58138
+Primary rays: 5184000
+Secondary rays: 0
+Total Rays: 5184000
+Rays/s: 1154490.621100
+Ray triangle tests: 5184000
+Ray triangle intersections: 1206804
+Triangle hit ratio: 0.232794
+
+Yeah, drops off a bit, maybe need more depth?
+
+Still, hit ratio is up.
+
+---
+
+Don't want to build an obj parser unless I have to.
+
+Easy to do, just time away from getting the movie going.
+
+But it is the biggest priority.
+
+Need to focus on:
+> Refitting so triangles refer to verts instead of storing them
+> Loading objs so we have object and material info
+    Loading the full poly car (if possible - might have to compromise)
+    x Want to see what loaders are out there before attempting, otherwise will build.
+Rendering diff colors etc.
+x getting the animation right (doesn't have to be perfect)
+
+Half decent rendering - shadows, reflections specular, and motion blur, if time.
+Tidy up C code
+Get Swift version working.
+
+Maybe for presentation could add quick overview of recurse ray funciton.
+
+Going to do the animation first and then the obj loading.
+Breadth before depth.
+
+Should get sphere in there or our talk is toast.
+
+---
+
+SAH STATS WITH 10K TEAPOT: TRIS AND VERTS SEPARATE
+960 res??
+
+Setup Fast BSP Tree Complete
+Render time: 0.209391s
+Triangles: 9438
+Primary rays: 518400
+Secondary rays: 0
+Total Rays: 518400
+Rays/s: 2475751.106781
+Ray triangle tests: 0
+Ray triangle intersections: 94019
+Triangle hit ratio: inf
+
+real	0m0.281s
+user	0m0.238s
+sys	0m0.016s
+
+300SL RETINA: TRIS AND VERTS SEPARATE
+
+Setup Fast BSP Tree Complete
+Render time: 4.334143s
+Triangles: 58138
+Primary rays: 5184000
+Secondary rays: 0
+Total Rays: 5184000
+Rays/s: 1196084.208574
+Ray triangle tests: 0
+Ray triangle intersections: 1206804
+Triangle hit ratio: inf
+
+---
+
+Should keep stats somewhere separate.
+
+---
+
+To iterate plan for today:
+
+Breadth first not depth.
+
+x Get the norms working at least.
+x Get scene elements in there, sky and ground, and cube.
+      Looking okay, but break the illusion of a real scene.
+x Get the million tri version in there, need to figure this out.
+      Just works. Great!!
+
+1M TRIS WITH 12 FRAMES @LOW RES: (and floor)
+real	3m13.324s
+render time about ys per frame.
+
+1M TRIS WITH 12 FRAMES @LOW RES: (without floor)
+real	1m31.752s
+render time about 1s per frame.
+
+Then
+
+> Obj loading
+Get different materials working
+Work on shading
+Reflections?
+Smoothing?
+^ We might have to do this with the low poly version.
+
+Finally
+
+Tidy/split C code
+Convert to Swift.
+
+Tomorrow, materials, and onto Swift.
+
+--------------------------------------------------------------------------
+
+x Get mats going
+x Low poly version
+x Norm issue
+      Can be fixed by fudging with the model, but will see if absolutely necessary first.
+> Some basic shaders
+      Net session
+      SAP shading articles
+      SSAO articles
+      Push Git
+      OBJ file spec
+      No checking sns etc
+
+This principle is one of the most basic and most well know phenomenon in CG. It is known under the name of the Lambert's Cosine Law. The amount of light that a surface receives is directly proportional to the angle between the surface normal N and the light direction L. This angle can be define mathematically as:
+
+cosθ=N.L
+
+Where r is equal to the distance between the light position and P. This falloff is known in CG as the square falloff. Note that when the radius of the sphere doubles (if the distance between the point light source and P doubles), the area of the sphere is multiplied by 4 and thus the light contribution is 4 times smaller. More generally, this kind of light attenuation follows what we call the inverse -square law. The profile of this falloff can be seen in the following figure.
+
+We could put this concept in a equation form:
+
+SP=diffuse()∗Kd+specular()∗Ks.
+
+Where the term SP here stands for the "shading at P". in this equation, the term diffuse() is nothing less than the diffuse effect that we learned to simulate in the previous lesson The term specular() is new and will be used to simulate the glossy appearance of the object. The strength of both effects or to say it differently balancing one against the other can be controlled through the two parameter Kd and Ks. In shading and the world of computer graphics these terms are given many names and have caused a lot of ink to spill. You can look at them as the strength or gain of the diffuse and specular component. By tweaking them, one can create a wild variety of effect. But how these two parameters should be set is something we will look into later on. For now, let's focus on the specular function itself.
+
+
+fR(ωo,ωi).
+Where ωo and ωi are the angle between the surface normal (N) and the view direction (V) and the surface normal and the light direction (I) respectively (figure 6). The subscript o stands for outgoing. In computer graphics, this function is given the fancy name of Bidirectional Reflectance Distribution Function or in short BRDF. A BRDF is nothing else than a function that returns the amount of light reflected in the view direction for a given incident light direction:
+
+BRDF(ωo,ωi).
+
+---
+
+Okay, specular sort of going, not bad at all, but need some work.
+
+So we're pretty much out of time.
+
+What I want to do is get the Swift version up and running as is with say a fixed shader and the monkey head, and then really work on the car in C++.
+
+---
+
+x Practise, update, dinner, then Swift.
+x Slide fixes/updates
+
+> Tidy
+> Go hard on Swift - incrementally add and confirm working.
+
+Multi thread, if time.
+
+---
+
+New plan of attack.
+
+For Swift, lets just get a rotating cam working with a whole manner of spheres.
+No K-D trees, no loaders, should be simple.
+
+Okay doone.
+
+I think we'll be okay if we take tomorrow:
+
+- Lambertian
+- Dieletric
+- Metal
+- Lighting... maybe.
+
+And then for car:
+x - Fix acne
+x - Normals fixed
+x - Use open door test model
+- Bright lighting Need to decide on this
+> 4 things we need to fix with this render
+
+Will aim to fix tonight.
+- Body
+- Grill
+- Glass
+- Tires
+
+Only real way to deal with this is make each mat a function
+so we can customize the shader perfectly for each..
+easiest to switch on shader program index...
+so each mat has it's own program.
+probably overkill, but easiest for now.
+
+The proper way to do this is:
+After loading the OBJ, convert the mat types to our own custom format.
+This way we can get some reuse. For instance different flavors of chrome would just use the same metal shader with different inputs.
+> Best we do things the naive way now, a shader for each material, and then merge what we can.
+
+---
+
+Today.
+
+All about shaders.
+
+MUST get Swift render down, confirm it is working, then lock it off.
+
+---
+
+BACKUP RENDER HERE. Might need to implement MThread.
+
+- Glass for windows
+- Spec reflect sky in body
+- Or, could spec reflect on global light
+- Metal for trim
+- If time, reflections in ground (marble like)
+- Render HQ test. If good multi thread and get it the fuck done.
+
+---
+
+Reiterate.
+
+x Priority today is to get Swift version working and practice.
+Swift
+x - Metal
+x - Glass
+x - Perlin
+x Then, make a cool looking scene
+x Need to put together a readme for this.
+
+If time, marble like perlin, can use for car scene too.
+Either that, or square plane intersection with tiled floor...
+If time, lights and shadows.
+x Done, leaving. Will render when getting ready.
+
+Two things to fix.
+x - Use a plane to prevent those ugly checker pattern breaks.
+      Might not be the best solution. Might be an easier way to not warp checkers just for x/z.
+Okay so this should be dead easy. Lets do it.
+x - Move the big pink sphere up slightly, it's hitting the ground..
+X - Render at 16:9!!! Actually, leaving. Like the cropped look.
+- Less fuzz on the metal spheres?
+
+> So want to get the merc running, but that might be another project.
+
+Will see how we go with the shaders. Would rather do the merc properly.
+
+I think we're all good for the presentation. If there's one thing I want to fix, it's the graph view.
+
+---
+
+NOTES ON vn ISSUE:
+
+ // interesting observation: reflection directions are quite different with interp on.
+ // makes sense, but they shouldn't be _that_ different
+//res = 0.5*V3 (reflected.x+1, reflected.y+1, reflected.z+1);
+//res = 0.5*V3 (N.x+1, N.y+1, N.z+1);
+
+
+///  if (Dot (v, N) > 0.0f)
+///  {
+
+///      // need to clamp to 90 in the dir of the incoming ray
+///      // How to do this. Need to know reflected anyway
+///  //reflected = v - 2*Dot (v, N1)*N1;
+
+/// res = V3 (0,0,1);
+/// res = 0.5*V3 (reflected.x+1, reflected.y+1, reflected.z+1);
+///  }
+
+
+//v3 bias = N*1e-4;//N1*0.3f;
+//v3 bias = N*0.15f;
+
+   // Okay, almost certain the problem is due to vert normals parellel to the plane.
+   // Can fix by calcing our own, although there might be a blender option to do so.
+   // Yeah, seems to be. Only way around is to have 2 normals per vert for hard edges.
+   // Need to experiment with blender on some basic primitaves...
+   // Yes, we can probably fix this up, but still wont entirely solve the problem.
+   // Maybe can fix by clampling the reflected vector
+   v3 bias = N*1e-4;
+   //v3 bias = N*0.f;
+   ray scattered = Ray (p + bias, reflected + bias);// + mat->fuzz*RandomInUnitSphere ());
+   //res = GetColorForRay (&scattered, object, depth+1);
+
+   // hmmm maybe this check only applies to spheres???
+   // no, but  seems fine for facets
+   // thinking the main issue is that maybe our edge vns are parellel to the plane
+   // which is not what we want.
+   //if (Dot (scattered.dir, N) > 0.f)
+   bool result = (Dot (scattered.dir, N) > 0.f);
+    if (depth < MAX_DEPTH && result)
+        ////                 //res = attenuation*GetColorForRay (&scattered, object, depth+1);
+        res = GetColorForRay (&scattered, object, depth+1);
+    else
+        res = V3 (0.5,1,0);
+
+//weird, vns are < 90. Something must be up. must be doing something wrong.
+// further: even when performing the above check we end up with green patches.
+
+Conclusion: Don't rotate/export OBJs in Blender. Clamp reflections greater than 90 to 90.
+
+--------------------------------------------------------------------------------
+
+Todos here:
+x clamp reflection normals.
+x need to fix cam animation and sphere placement
+> ground spheres, wondering if these should be polys
+proper specular for car.
+    Should we go lobes on this? If we're not aiming for real time then it's a good idea.
+    Before that need to get MC running
+
+---
+
+Big goal is to get this going (real time and then stochastic), and then srs all rt stuff.
+
+x Okay, need to do global illumination
+x Then metal trim
+
+---
+
+Might want to look at resources on the net for car paint and glass.
+
+> Then specular body/glass
+Might be best to make these materials with spheres first.
+
+x Then perlin noise marble
+
+Then optimize for real time.
+x Average frame time etc
+x SIMD traverse
+      x Debug.
+        x Seems we never pop the stack...
+        x Okay, worked, full of holes, but working.
+
+x NEED to fix Swift version. Will try and recreate bug with soak test in lldb.
+
+x HAVE to make transfer TODAY
+x Get video up on Twitter, YouTube.
+
+SIMD shaders, ray depth > 0
+
+---
+
+> Multi thread
+      x Need to give each chunk it's own traversal stack
+      Hmmm, getting about 2M rays/sec max. Not enough. Was aiming for 6
+          Actually faster with one thread over 4. Something is wrong here. Maybe cache?
+          Turning off all thread writes doesn't change things. 1 is still faster.
+          x think my timing is screwed. more threads definitely appears faster.
+          x Okay, timer is wrong, might be in cycles which is why we are getting longer times.
+          x Using instruments, seems we are getting about 3.5M rays/s Not bad, need a better timer tho.
+          Okay, getting 8M rays/sec on big images without file writes pretty damn good.
+          Hmmm, still getting some red spots at HD res. Need to figure these out.
+             Don't appear at low res.
+
+      x Need to remove file write bottle neck. Could write out while calcing next?
+      x     Probably not worth it for movie renders.
+      x     For real time will use a Metal buffer.
+
+x      Flip the buffer.
+x          Should be able to do this on write.
+x              Will have to process chunks bottom to top.
+x
+x                  Before flip:
+x                  Scene stats:
+x                  Megacycles:8374.832031
+x                  Render time total:2.997936
+x                  Frame count: 12
+x                  Triangles: 71718
+x                  Rays/s: 8394385.000000
+x
+x                  Per frame stats:
+x                  Render time: 0.249828s
+x                  Primary rays: 2097152
+x                  Split packet rays: 3247
+x                  Split packet ratio: 0.000129
+x                  Secondary rays: 0
+x                  Total Rays: 2097152
+x
+x                  After flip:
+x                  Scene stats:
+x                  Megacycles:8395.553711
+x                  Render time total:3.005353
+x                  Frame count: 12
+x                  Triangles: 71718
+x                  Rays/s: 8373666.000000
+x
+x                  Per frame stats:
+x                  Render time: 0.250446s
+x                  Primary rays: 2097152
+x                  Split packet rays: 3247
+x                  Split packet ratio: 0.000129
+x                  Secondary rays: 0
+x                  Total Rays: 2097152
+x
+x                  real	0m3.900s
+x                  user	0m22.135s
+x                  sys	0m0.047s
+
+      x Do work on main thread too.
+            Done, now at Rays/s: 9201100.000000
+
+      x Need to fix to allow for images of any size
+            Need to setup in a way that we only work out the rays we're actually going to use.
+
+      x Get 1M working.
+            Working, but slow (> 1M rays/s)
+            Still getting the red dots. Seem to be more promenant at this LOD.
+            Okay, very very tempted to cache the bsp tree somewhere. Even if just for debugging.
+            Need to get some stats on our tree, how many tris etc.
+
+      Affinities might help
+      uncached writes be best? Need to profile. Shouldn't matter if we are cache aligned???
+
+      Should confirm alignment and move to 32bpp
+
+x Split packets 4 wide with mask.
+      x Got a bug when we traverse 0.
+
+
+//// For one core, GetSigns:
+////       Scene stats:
+//// Megacycles:29436.173828
+//// Render time total:10.537256
+//// Frame count: 12
+//// Triangles: 71718
+//// Rays/s: 196787.468750
+//// 
+//// Per frame stats:
+//// Render time: 0.878105s
+//// Primary rays: 172800
+//// Split packet rays: 0
+//// Split packet ratio: 0.000000
+//// Secondary rays: 0
+//// Total Rays: 172800
+//// 
+//// real	0m14.978s
+//// user	0m14.929s
+//// sys	0m0.034s
+//// 
+//// For one core, hardcoded signs:
+//// ~200k
+//// So worth it!
+
+x SIMD SHADERS
+x Going to just do the depth thing for now, see how much more efficiency we get with SIMD
+Not much - maybe 1-2 %.
+
+x Square shaped packets (must be able to try both)
+      x Flip image.
+Hmmm, once again, no real speed diff.
+
+> Anti alias
+Not quite sure how to do this without MC. MC fine, but 1/4 the speed for real time.
+Could transform disconnected edges to viewport?
+Could somehow do as a screen buffer effect?
+Need to read Wald IGI chapter.
+Might try a naive version first, which basically means we're going MC.
+
+    While this optimal tile size depends on the actual settings, tiles sizes of 8 × 8 pixels (for very costly per-pixel computations) to 32 × 32 pixels (for extremely simple computations) seem to be sensible9. If not manually overridden, RTRT uses a default tile size of 16 × 16, which usually achieves good results.
+
+    Obviously, the just mentioned frame rates of several dozen frames per second in full-screen resolutions would create a severe computational load just for copying the received pixels to their final image location. This is currently done by first copying the pixels to an intermediate buffer, from where they are later (once all the pixels of the current frame have been received) again copied to the frame buffer specified by the application (which may need to copy these pixels again in order to display them). This multiple buffering is neccessary due to the highly asynchronous system design and the interleaving of different frames, which results if tiles from different frames arriving “out of order”.
+
+Typical criteria specify 2 or 3 triangles per cell and usually result in fast traversal times – but also in deeper BSPs, which are more costly to create. 
+    This is prob why the 1M merc is slow.
+
+In order to access light sources, a surface shader can query a list of light shaders over which it can iterate. The surface shader can then call back to each light shader (via rtsIlluminate(...)) to ask it for an “illumination sample”, or “light sample”. A “light sample” consists of all 3 values required for doing the lighting calculations in the surface shader: The direction to- wards the light, its distance (possibly infinite), and the intensity with which it influences the hit position.
+Once a light shader has returned its light sample, this sample forms a com- plete shadow ray description with origin, direction, and maximum distance. This shadow ray description can then (but does not have to) be used by the surface shader to compute shadows by calling rtsOccluded(...) with this light sample, which in turn uses the ray tracing core to cast a shadow ray. If semi-transparent occluders are used, the surface shader can also use rtsTransparentShadows() instead of rtsOccluded, which will iterate over all the potential occluders along the shadow ray to compute the attenuated contribution of the light source.
+
+Except for casting shadow rays via rtsOccluded() (or via rtsTransparent- Shadows() for computing transparent shadows), further secondary rays can also be shot via rtsTrace. This rtsTrace shoots an arbitrarily specified ray, determines the hit point, calls the respective shader at that hit point, and returns the color computed by that shader. In case the ray did not hit any objects, rtsTrace automatically calls the environment shader for computing the color of that ray.
+
+An even more important issue to work on is an efficient shading API that supports coherent packets of rays. As described in Section 7, the full performance of the RTRT core can only be unleashed if SIMD packet traversal
+with efficient SIMD shading can be used. In its current form, however, the OpenRT shader API actually supports only the shading and tracing of single rays. For those having the actual RTRT sources, it is still possible to use both packet traversal code and OpenRT API at the same (e.g. by performing the packet traversal code inside a rendering object), but a clean external API does not exist. As it is not yet even clear how such packet shading could be efficiently performed at all (see the discussion in Section 7), it seemed premature to already discuss its API issues.
+
+
+TODOs from now:
+
+x Anti alias
+      Going to do the naive thing first.
+          For this need to move to a rays per pixel model, where simd rays/pixel are used.
+          Either that, or could render the image n times with random per pixel positions and average at end.
+              Try this way first.
+          First way would have better cache coherency however.
+              However, if you rendered the same _packet_ n times, that would be fine. Will move towards that.
+              Think that this is the best way to do MC too.
+          Other option is to use 2xMSAA with a 2x1 packet.
+              Although this is more work, and want to try Wald way before getting into this.
+      Going to continue to read Wald to figure out how this can be done better.
+
+Add stats for packet coherence.
+
+Are SIMD shaders necessary? Yes, take a 90% speed hit.
+
+x Packet material selection.
+x - Getting alot of packet sized jaggies around the wheel arches. Need to fix these.
+x Background mask/splitting.
+x      Okay, going to try splitting on material, regardless of primitive type.
+x      Only caveat is we have to special case infinite distance. But then it just becomes another material.
+x      Attaching a mask to the ray packet is probably the best way to go.
+x Get shadows working with new model.
+
+> Fix shadow triangle hit problem.
+      Really not sure that there is an easy fix to this one.
+      The problem is that our shading creates the impression of a 3d curve over a 2d plane. But our hits are still based on the 2d plane.
+      So we need a way of projecting those hits into a 3d space, which is not really possible for many extreme cases.
+      About the best I can come up with is a projection of the vertex normal into a circle "slice", but this would only work if the projections converge at the same distance. If they converge at varying distances, the whole thing falls apart.
+      So, going to leave this for now, maybe look into some research, and see if there's a better way to combat this problem.
+
+x Reimplement background
+x Get sphere working
+
+x Basic reflections
+x Have a go at lambertian?
+      Actually looks really good, even though it's slow as anything...
+      Would be worth building the animation with this just to make something that looks good.
+
+      x Get spheres working with lambert.
+      Could resurrect camera dof focus etc... Will do that last. Most important we sort out materials now.
+      Wondering if BVH's are more efficient for MC (as they don't rely on ray direction?) Wouldn't think so.
+      Even if we get this looking nice with MC would like to have another crack at real time. That's the long term goal.
+
+x Fix fringes
+
+x Re-implement perlin noise.
+
+x Proper materials/textures
+x    Want to move back to PS style, and then translate the merc colors to that manually. Much easier.
+x   Textures separate to mat type.
+
+x Would like the car body to be a lambert that is normal
+x And the ground to be perlin.
+
+x abstracting out the split test code
+    Should really clamp reflection angles
+
+I didn't think of it up until now but it's pretty bloody obvious. Starving the SIMD registers only means we're not making use of the fpus.
+    Processing scalar and vector together should provide a speedup, but we need to interleave or we won't get any oooe benefits
+    So for instance, single ray execution where say, xyz/rgb are processed as a vector could work.
+
+> Re implement specular and reflections. Or better yet, a proper car paint bdrf.
+As a strategy, would like to get simple phong shading working first, and then look at car paint bdrf (Cook Torrance, as per Wald paper).
+TBH if phong looks good enough then I'm happy to stick with it for this thing.
+can get phong shading working but not sure how to with mc
+Going to work on these with ref spheres.
+
+x possibly a reflection map to make a puddle like effect
+
+> Proper paint
+      So not sure what to do here. Proper BDRF requires a PDF and learning about all of that. Not that I don't want to. More That I don't really have the time.
+      Okay, leaving this for now. Going to save this for another chapter.
+      Going to do this properly another time. There is a steep learning curve here.
+      To do this properly really need to go through the second and third books, and then get the BRDF/importance sampling down.
+      Is it worth sorting this out? Feel that it is, but would like to get everything else sorted first. Breadth then depth.
+
+x glass
+      > (Need add thickness to model).
+            Blender working, next step is to get the blender file.
+
+> Texture
+      x Need to use acos etc.
+      Texture loads from mtl files
+          x wuv weighting
+          x fix cube triangle issue
+              probably a bsp issue...
+              if we really wanted could ignore, but it _is_ a bug so should fix.
+              first to prove, will expand bsp with some extra prims 
+              Okay, bsp is fine, just need to export as tris.
+          x export blender file textures
+          x BENZ WORKING
+
+      x bilinear texture filtering
+      x Also, textures appear washed out, might be because we are/aren't using sRBG.
+            Might be okay, more specifically, that is what our color curve *should* be doing...
+            Because it happens to the rest of our colors too.
+
+x More keen to go for the silver for the moment... With all reflections etc will look pretty good.
+> Fix car model issues.
+
+      bump/disp map? Need to figure this out.
+      Sounds like it requires tessilation. Bump might be fine for merc tires, or not at all.
+      glass extrude
+          While it works, it might be more consistent and efficient to fake it.
+          Yes, going to do this.
+          But, will also need to allow for internal reflection. Which is really hard.
+          So either no internal reflection, or we suck it up.
+          Hmmm now not working. Bias too much? No... Not thick enough?? Alg broken?
+          Ok, checking with sphere looks totally fine. Too thin?
+          Cube, while wierd, seems technically fine.
+Got to go, 60mm glass thickness.
+
+x back window inside not joining correctly
+x front window too thick - should have gone 50mm
+x wipers going through screen
+
+      bathtub
+          Still not covering the holes where there would be an axle or drum brake.
+              x Bottom lights stick out way too much.
+              > Brake drum like thing would prb be best
+              > Reduce lowering just a tad? maybe about 1cm is a good idea.
+
+x perlin sky, needs to be a flat plane.
+      Need to work on this.
+
+x Memory issue. Either our perlin texture is pointing to the wrong mem, or we're releasing loaded object mem (that is still in use while rendering) too early, or we're not allocating enough for our buffer. Don't think it's the latter because of the way the corrupted parts of the picture followed the earth exactly.
+    Issue was we were writing materials into unallocated memory. Opps.
+
+x defocus blur
+      x Need autofocus or this is pointless.
+
+x Fix wheels - either remove texture or make bump style thing.
+x Fix other materials. Esp leather
+x lights - separate material - could make metal?
+x Try a full render to check lighting and colors.
+x Okay, so looking good but extremely slow. Need to get onto that.
+First, make everything look good:
+    x Lights, would like to try the mirror thing.
+    x Leather interior, not just seats
+    x HDR horizon
+    x Tyres? Specular?
+    x Bumper normals ok?
+
+x Paint fresnel? Should be easy.
+
+x Camera blur? Will try a render tonight but not so sure we need/want it.
+x   Tried this, looks bad and overpronounced.
+x    _could_ look good if much more subtle (maybe a quarter of what it is now), and we used many more rays. (over 100rpp)
+x    I think a very subtle amount, so that you only notice if you look really hard, could be quite good.
+
+x Edges look bad/noisy, need to clamp reflection angles.
+      Tried, doesn't look good, convinced the only way to deal with this properly is to keep testing rays at different angles until one is found that doesn't collide into the same geometry. This would not be trivial computationally, and makes zero difference for the 1M version (which looks fine anyway), so I'm leaving it.
+
+x Flickering in sky.
+x Noise on windows looks bad, maybe can create two rays and mix.
+
+x Separate material for headlight back mirror.
+
+x Maybe tone down the schlick multiplier?
+x To clamp body schlick multiplier or not? Will make movie with clamping.
+
+x Fireflies (maybe a de-Nan-er?)
+
+x Door struts? Would be a good idea to add.
+      Okay, leave for now, can't figure out vertex normals in Blender.
+      Hmmm, going to go out on a limb and say that they don't actually look that good.
+      Going to finish and add anyway, and see how they end up looking.
+      Yeah, jury's out. TBH I never noticed thier absence until I saw pictures of the real thing.
+
+> And need to nail lights.
+    x Try drawing the texture on outside of glass only.
+    Try reflecting bright parts of texture upward and dark down.
+        Total hack but about the best I can do.
+        However doesn't look convincing from the side.
+        Would probably look okay with a glass fresnel reflection too.
+        This is my backup.
+    Try making the reflector mesh much more shallow to avoid deep reflections.
+        Add a non reflective "light" center.
+    Okay, going to go all out on this and use a normal map. Not sure how to create yet, maybe out of geometry or a displacement map.
+        Pretty sure it will look good, just need to do it properly.
+        X For this, I'm just going to use the normal map on my phone that I found on the internet.
+        Will see if I can get something working ok with that first, if so, may look at emulating the actual Merc cover (possibly not needed).
+        Point is that we spend more time programming than we do messing around in Blender.
+
+Hmmm pretty humbling reading about all the speedups available, especially later streaming methods. I would love to give them when I have another crack after.
+
+Biggest issue with this ray tracer is that it's just damn slow, impossible to figure out if a change is actually worth it or not.
+
+---
+
+x White bulb for headlights + white material
+x Separate glass material for headlights
+Would like to look at different bump map design but not now.
+
+x HDR sky:
+x     Sun like entity
+x     Highlights on clouds
+x     Smoother, exponential fade toward horizon.
+
+x Ground fixes:
+    x Actual fresnel for "water". No reason we couldn't use dielectrics.
+    x Create normal map from displacement noise, add some "wet" specularity.
+    x Still really like beach thing... Hmmm, just need a litte 3d with it..
+    x    Okay, going back, but going to try and add just a little of that specularity, with either the same, or a separate (smoother) bump pattern.
+    x Fix ground reflections, noise shape so we see more of the car reflected.
+    x Since we are implementing an HDR sky, can tone down the reflectivity.
+
+x Ideally, we should be able to control the angle of the sun. It looks cool but we can't even see it.
+    Ideally would shine from the front
+    If the angle doesn't work with the ground/clouds other fail safe option is to rotate the car. Just need to set the initial camera angle.
+    0.6 looks best so far.
+    0.4 looks real good too.
+    1.58 is great too.
+
+x Make bath tub non reflective
+x Struts look good, need plates to extend to door edges.
+
+x If we can make normal map from displacement, try doing so for tyres.
+
+Test render thoughts:
+    x Interior leather too shiny. Seats arent to bad but trim is too shiny.
+        x These are the same material, so should use the same setting and get it right.
+    x Glass could be toned down.
+    x Sun looks a little fake, a second, very intense, very small sun might work.
+
+    Averaged 200k rays/sec, should be able to increase that greatly.
+    Probably need 3 bounces minimum for chrome surfaces etc. Maybe 4 double glass.
+
+Don't get too "tweaky". Deal with all major issues then get "tweaky".
+
+Optimize depth for dielectrics only? Might be easier just to optimize in general?
+    Another optimization for the headlights would be to split the reflector and the lens into a separate object without smoothing.
+        Because, it wouldn't be that noticeable, as long as the surrounding chrome was smoothed. Could make that part of the body again. Could also incorperate edges too.
+
+Work out acceptable render settings, start benchmarking, profiling, and look at where we can optimize.
+Should do a heat mat and coherence map.
+
+So, best to probably do the following:
+Render ONE frame at the quality we want.
+1920*1080
+32 rpp
+6 bounces
+And profile, see how long it takes.
+
+Before this, do a test movie render, and see if there are any other visual things that we need to fix up on.
+
+x Stats on BSP tree too.
+    So just from doing this there are two major issues:
+    Blender says we have 59854 triangles, while our stats say we have 78190.
+        This is because of triangles that cross the bsp bounds and have to be part of two leaves, I'm guessing, but I would like to know how many are actually doing this.
+    The number of triangles per leaf is still very high.
+
+DEPTH 10:
+Min tri count: 186
+Max BSP depth: 484
+Cost best found: 3
+
+Scene stats:
+Megacycles:246435.015625
+Render time total:88.216240
+Frame count: 12
+Triangles: 59854
+Rays/s: 71318.570312
+
+Per frame stats:
+Render time: 7.351353s
+Primary rays: 524288
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 524288
+
+real	1m29.146s
+user	10m41.950s
+sys	0m1.313s
+
+
+DEPTH 20:
+Min tri count: 9996
+Max BSP depth: 9100
+Cost best found: 12519
+
+Scene stats:
+Megacycles:880533.687500
+Render time total:315.204254
+Frame count: 12
+Triangles: 59854
+Rays/s: 19959.933594
+
+Per frame stats:
+Render time: 26.267023s
+Primary rays: 524288
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 524288
+
+real	5m16.385s
+user	34m37.709s
+sys	0m4.019s0:
+
+
+
+DEPTH 15:
+Min tri count: 2157
+Max BSP depth: 4789
+Cost best found: 1092
+
+Scene stats:
+Megacycles:381063.750000
+Render time total:136.409225
+Frame count: 12
+Triangles: 59854
+Rays/s: 46121.925781
+
+Per frame stats:
+Render time: 11.367436s
+Primary rays: 524288
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 524288
+
+real	2m17.446s
+user	15m16.834s
+sys	0m2.021s
+
+DEPTH 7:
+Min tri count: 19
+Max BSP depth: 99
+Cost best found: 0
+
+Scene stats:
+Megacycles:434353.531250
+Render time total:155.485352
+Frame count: 12
+Triangles: 59854
+Rays/s: 40463.335938
+
+Per frame stats:
+Render time: 12.957113s
+Primary rays: 524288
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 524288
+
+real	2m36.366s
+user	19m20.350s
+sys	0m2.264s
+
+DEPTH 11:
+Min tri count: 294
+Max BSP depth: 834
+Cost best found: 16
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Setup Fast BSP Tree Complete
+All render jobs complete.
+All render jobs complete.
+All render jobs complete.
+All render jobs complete.
+All render jobs complete.
+All render jobs complete.
+All render jobs complete.
+All render jobs complete.
+All render jobs complete.
+All render jobs complete.
+All render jobs complete.
+All render jobs complete.
+
+Scene stats:
+Megacycles:250318.796875
+Render time total:89.606506
+Frame count: 12
+Triangles: 59854
+Rays/s: 70212.046875
+
+Per frame stats:
+Render time: 7.467209s
+Primary rays: 524288
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 524288
+
+real	1m30.552s
+user	10m8.983s
+sys	0m1.560s
+
+DEPTH 10:
+Min tri count: 186
+Max BSP depth: 484
+Cost best found: 3
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Setup Fast BSP Tree Complete
+All render jobs complete.
+All render jobs complete.
+All render jobs complete.
+All render jobs complete.
+All render jobs complete.
+All render jobs complete.
+All render jobs complete.
+All render jobs complete.
+All render jobs complete.
+All render jobs complete.
+All render jobs complete.
+All render jobs complete.
+
+Scene stats:
+Megacycles:249042.921875
+Render time total:89.149788
+Frame count: 12
+Triangles: 59854
+Rays/s: 70571.742188
+
+Per frame stats:
+Render time: 7.429149s
+Primary rays: 524288
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 524288
+
+real	1m30.084s
+user	10m35.439s
+sys	0m1.339s
+
+DEPTH 13:
+real	1m43.035s
+user	11m37.519s
+sys	0m1.318s
+
+DEPTH 9:
+real	1m37.912s
+user	11m51.405s
+sys	0m1.610s
+---
+
+1m tests:
+
+Depth 10:
+Setup Make BSP Tree
+Leaf creation stats:
+Min tri count: 200
+Max BSP depth: 572
+Cost best found: 0
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Setup Fast BSP Tree Complete
+All render jobs complete.
+
+Scene stats:
+Megacycles:677044.500000
+Render time total:242.361328
+Frame count: 12
+Triangles: 753064
+Rays/s: 8555.820312
+
+Per frame stats:
+Render time: 20.196777s
+Primary rays: 172800
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 172800
+
+real	5m8.052s
+user	32m25.970s
+sys	0m3.656s
+
+
+Depth 15:
+Setup Make BSP Tree
+Leaf creation stats:
+Min tri count: 5145
+Max BSP depth: 17373
+Cost best found: 552
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Setup Fast BSP Tree Complete
+All render jobs complete.
+
+Scene stats:
+Megacycles:656530.687500
+Render time total:235.017990
+Frame count: 12
+Triangles: 753064
+Rays/s: 8823.154297
+
+Per frame stats:
+Render time: 19.584833s
+Primary rays: 172800
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 172800
+
+real	5m0.885s
+user	30m58.750s
+sys	0m3.437s
+
+DEPTH 20:
+Crashed. Out of mem?
+Must be doing something wrong here.
+
+
+Need to fix up little front lights.
+
+maybe go back to 70k version and look for inefficiencies, for instance, how many triangles are shared across same nodes.
+
+
+Yeah with depth 15 it things there are 130k tris. Must be doing something drastically wrong, doubling up.
+wow, 333k with depth 20...
+
+for 750k we're just shy of 1M
+
+25Compared to Kaplan-BSPs, a maximum tree depth with the surface area heuristic is more likely to be in the range of 50 or more
+
+Okay, was not able to get single frame at HD 64rpp, md 6 working in 6 hours.
+
+So the goal is to get it done in at least 6 hours.
+
+But more specifically:
+
+Want something I'm able to post in the next month
+30*6 = 180 hours = 180/300 is 36 minutes per frame.
+
+Would be willing to take an hour, but not much more.
+So we need at least a 6x speedup, possibly much more.
+Or reduce the quality. Will try 32 tonight with 4 bounces to see if we can get something working.
+
+---
+
+Hmmm, so best thing for now is to probably try and figure out what is going on with our BSP.
+
+It won't tell us the full story but could try outputting an obj.
+
+Should do all optimizations in the make space...
+
+Also as a sanity check ensure the make space depth/stats are the same as the fast.
+
+---
+
+The generated tree is quite good however. It can be improved, consider this work in progress: Right now, triangles are not clipped to the parent voxel before their extends are determined. Doing this clipping allows split planes to be situated at the exact
+position where a triangle leaves a node. This is not a very difficult extension, but it will make the tree compiler even slower.
+
+I get this now. It means we clip each triangle for in order to obtain it's bounds, not permenantly.
+
+Easy to see how this will provide a speed up. However, I don't think that's the root cause of our issues here.
+
+I think that it's a good idea to assume that the fast bsp tree works for now.
+
+We'll just gather stats and focus on getting the slow tree working as best as we can.
+
+
+1M model, bsp max depth 10:
+Setup Make BSP Tree
+Leaf creation stats:
+  Hit min tri count: 200
+  Hit max BSP depth: 572
+  Best cost found: 0
+SLOW BSP STATS:
+  Number of leaf nodes: 772
+  Number of non empty leaves: 695
+  Average triangles per non empty leaf: 1183.164062
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Setup Fast BSP Tree Complete
+All render jobs complete.
+
+Scene stats:
+Megacycles:744750.687500
+Render time total:266.598083
+Frame count: 12
+Triangles: 753064
+Rays/s: 7778.000488
+
+Per frame stats:
+Render time: 22.216509s
+Primary rays: 172800
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 172800
+
+real	5m31.486s
+user	34m38.011s
+sys	0m6.236s
+
+1M MODEL, BSP MAX DEPTH 20
+Started
+Setup Make BSP Tree
+Leaf creation stats:
+  Hit min tri count: 47734
+  Hit max BSP depth: 91890
+  Best cost found: 20428
+SLOW BSP STATS:
+  Number of leaf nodes: 160052
+  Number of non empty leaves: 148190
+  Average triangles per non empty leaf: 15.545212
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Setup Fast BSP Tree Complete
+All render jobs complete.
+
+Scene stats:
+Megacycles:1389982.875000
+Render time total:497.571594
+Frame count: 12
+Triangles: 753064
+Rays/s: 4167.440430
+
+Per frame stats:
+Render time: 41.464298s
+Primary rays: 172800
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 172800
+
+real	9m25.410s
+user	63m43.826s
+sys	0m8.157s0:
+
+1M MODEL, BSP MAX DEPTH 20 Normals only
+Started
+Setup Make BSP Tree
+Leaf creation stats:
+  Hit min tri count: 47734
+  Hit max BSP depth: 91890
+  Best cost found: 20428
+SLOW BSP STATS:
+  Number of leaf nodes: 160052
+  Number of non empty leaves: 148190
+  Average triangles per non empty leaf: 15.545212
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Setup Fast BSP Tree Complete
+All render jobs complete.
+
+Scene stats:
+Megacycles:1699.844849
+Render time total:0.608493
+Frame count: 12
+Triangles: 753064
+Rays/s: 3407763.000000
+
+Per frame stats:
+Render time: 0.050708s
+Primary rays: 172800
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 172800
+
+real	1m7.826s
+user	1m8.392s
+sys	0m0.725s
+
+60k MODEL, BSP MAX DEPTH 50 Normals only
+
+Started
+Setup Make BSP Tree
+Leaf creation stats:
+  Hit min tri count: 907521
+  Hit max BSP depth: 74256
+  Best cost found: 40667
+SLOW BSP STATS:
+  Number of leaf nodes: 1022444
+  Number of non empty leaves: 1020498
+  Average triangles per non empty leaf: 1.919129
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Setup Fast BSP Tree Complete
+All render jobs complete.
+
+Scene stats:
+Megacycles:1563.644409
+Render time total:0.559738
+Frame count: 12
+Triangles: 59854
+Rays/s: 3704593.750000
+
+Per frame stats:
+Render time: 0.046645s
+Primary rays: 172800
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 172800
+
+real	0m2.779s
+user	0m3.727s
+sys	0m0.191s
+
+Okay so this is interesting. We practically have no empty leaf nodes, which is a massive red flag.
+
+In contrast, the Bunny Havran is 338k/159k, about half of it's leaf nodes are empty. And there are a lot less.
+
+The other thing is that we didn't find the best cost for most of them.
+
+Which is interesting.
+
+Another good idea. Lets get the Stanford Bunny in there, we should be getting the same stats as Havran.
+
+Once we sort out these issues, I want to see how many ray packets we are making, and how many of them are coherent.
+If it's a small percentage, then it's almost certainly better to go back to scalar shaders, and single traversal for non primary rays.
+
+STANFORD BUNNY D50 Normals only.
+Started
+Setup Make BSP Tree
+Leaf creation stats:
+  Hit min tri count: 249632
+  Hit max BSP depth: 15797
+  Best cost found: 64997
+SLOW BSP STATS:
+  Number of leaf nodes: 330426
+  Number of non empty leaves: 322311
+  Average triangles per non empty leaf: 2.618139
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Setup Fast BSP Tree Complete
+All render jobs complete.
+
+Scene stats:
+Megacycles:1582.767090
+Render time total:0.566583
+Frame count: 12
+Triangles: 69451
+Rays/s: 3659836.250000
+
+Per frame stats:
+Render time: 0.047215s
+Primary rays: 172800
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 172800
+
+real	0m1.946s
+user	0m2.903s
+sys	0m0.126s
+
+So, total leaf nodes count seems ok, but like the Gullwing, we have practically no empty leaves.
+
+SO that's the first thing we should sort out.
+
+Best cost should be being hit much more often too.
+
+---
+
+Hmmm, depth.
+
+Thinking that maybe my trees are much deeper than I thought that they were?
+
+For instance, my merc is reporting that it's 300 or so deep in some parts...
+
+Unless we're getting the depth wrong...
+
+Yep, checking in Xcode, almost certain that we are getting the depth wrong on read, not on create.
+
+Which is a shame...
+
+---
+
+Okay, some big issues:
+
+STATS FOR GULLWING IN DEBUG MODE (60K TRIS):
+
+Started
+Setup Make BSP Tree
+Leaf creation stats:
+  Hit min tri count: 19418
+  Hit max BSP depth: 6066
+  Best cost found: 113514
+SLOW BSP STATS:
+  Number of nodes: 277995
+  Number of leaf nodes: 138998
+  Number of non empty leaves: 137050
+  Average triangles per non empty leaf: 8.071390
+  Leaf nodes by depth:
+
+STATS FOR GULLWING IN FAST MODE (60K TRIS):
+
+Started
+Setup Make BSP Tree
+Leaf creation stats:
+  Hit min tri count: 907521
+  Hit max BSP depth: 74256
+  Best cost found: 40667
+SLOW BSP STATS:
+  Number of nodes: 2044887
+  Number of leaf nodes: 1022444
+  Number of non empty leaves: 1020498
+  Average triangles per non empty leaf: 1.919129
+  Leaf nodes by depth:
+    00: 0
+    01: 0
+    02: 0
+    03: 0
+    04: 0
+    05: 2
+    06: 4
+    07: 13
+    08: 27
+    09: 57
+    10: 99
+    11: 151
+    12: 272
+    13: 635
+    14: 1162
+    15: 1958
+    16: 2919
+    17: 3901
+    18: 4581
+    19: 4986
+    20: 5172
+    21: 5374
+    22: 5504
+    23: 5882
+    24: 6255
+    25: 6840
+    26: 7459
+    27: 8363
+    28: 9628
+    29: 11394
+    30: 13544
+    31: 15875
+    32: 18433
+    33: 21135
+    34: 23906
+    35: 26680
+    36: 29474
+    37: 32271
+    38: 35070
+    39: 37869
+    40: 40668
+    41: 43467
+    42: 46266
+    43: 49065
+    44: 51864
+    45: 54663
+    46: 57462
+    47: 60261
+    48: 63060
+    49: 65859
+    50: 142914
+total: 1022444
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Create fast BSP complete!
+All render jobs complete.
+
+Scene stats:
+Megacycles:2025.075073
+Render time total:0.724916
+Frame count: 12
+Triangles: 59854
+Rays/s: 2860470.250000
+
+Per frame stats:
+Render time: 0.060410s
+Primary rays: 172800
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 172800
+
+real	0m2.965s
+user	0m3.765s
+sys	0m0.244s
+
+-
+
+Need to sort this out.
+
+BUNNY OFF:
+
+Started
+Setup Make BSP Tree
+Leaf creation stats:
+  Hit min tri count: 64546
+  Hit max BSP depth: 1241
+  Best cost found: 79802
+SLOW BSP STATS:
+  Number of nodes: 291177
+  Number of leaf nodes: 145589
+  Number of non empty leaves: 137472
+  Average triangles per non empty leaf: 4.802251
+  Leaf nodes by depth:
+    00: 0
+    01: 0
+    02: 0
+    03: 0
+    04: 0
+    05: 2
+    06: 2
+    07: 30
+    08: 40
+    09: 44
+    10: 51
+    11: 85
+    12: 179
+    13: 321
+    14: 765
+    15: 1280
+    16: 2368
+    17: 4420
+    18: 8557
+    19: 16167
+    20: 21454
+    21: 19915
+    22: 16214
+    23: 13657
+    24: 11017
+    25: 7341
+    26: 3960
+    27: 1930
+    28: 1063
+    29: 783
+    30: 668
+    31: 636
+    32: 632
+    33: 632
+    34: 632
+    35: 632
+    36: 632
+    37: 632
+    38: 632
+    39: 632
+    40: 632
+    41: 632
+    42: 632
+    43: 632
+    44: 632
+    45: 632
+    46: 632
+    47: 632
+    48: 632
+    49: 632
+    50: 1264
+total: 145589
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Create fast BSP complete!
+All render jobs complete.
+
+Scene stats:
+Megacycles:2019.100464
+Render time total:0.722777
+Frame count: 12
+Triangles: 69451
+Rays/s: 2868935.500000
+
+Per frame stats:
+Render time: 0.060231s
+Primary rays: 172800
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 172800
+
+real	0m5.127s
+user	0m7.262s
+sys	0m0.099s
+
+BUNNY DEBUG ON:Started
+
+Setup Make BSP Tree
+Leaf creation stats:
+  Hit min tri count: 249632
+  Hit max BSP depth: 15797
+  Best cost found: 64997
+SLOW BSP STATS:
+  Number of nodes: 660851
+  Number of leaf nodes: 330426
+  Number of non empty leaves: 322311
+  Average triangles per non empty leaf: 2.618139
+  Leaf nodes by depth:
+    00: 0
+    01: 0
+    02: 0
+    03: 0
+    04: 0
+    05: 2
+    06: 2
+    07: 30
+    08: 40
+    09: 44
+    10: 51
+    11: 85
+    12: 179
+    13: 321
+    14: 765
+    15: 1280
+    16: 2368
+    17: 4420
+    18: 8559
+    19: 16165
+    20: 21454
+    21: 19902
+    22: 16203
+    23: 13628
+    24: 10935
+    25: 7309
+    26: 4068
+    27: 2260
+    28: 1855
+    29: 2133
+    30: 2627
+    31: 3201
+    32: 3797
+    33: 4397
+    34: 4997
+    35: 5597
+    36: 6197
+    37: 6797
+    38: 7397
+    39: 7997
+    40: 8597
+    41: 9197
+    42: 9797
+    43: 10397
+    44: 10997
+    45: 11597
+    46: 12197
+    47: 12797
+    48: 13397
+    49: 13997
+    50: 30394
+total: 330426
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Create fast BSP complete!
+All render jobs complete.
+
+Scene stats:
+Megacycles:1515.443970
+Render time total:0.542483
+Frame count: 12
+Triangles: 69451
+Rays/s: 3822423.750000
+
+Per frame stats:
+Render time: 0.045207s
+Primary rays: 172800
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 172800
+
+real	0m1.970s
+user	0m2.897s
+sys	0m0.111s
+
+Yea, so getting about double the amount of nodes that we should be.
+
+---
+
+MERC 1M Normals AA 64 CHUNKDIM 16 BSP DEPTH 50 O3 REF DEPTH 6
+
+Started
+Setup Make BSP Tree
+Checking MakeBSPNode input...
+t:0 s:0.000000
+V min:-3.666 -1.084 -7.040 max:3.668 5.209 6.140
+makenode->trilist.count:753064
+Leaf creation stats:
+  Hit min tri count: 492651
+  Hit max BSP depth: 81747
+  Best cost found: 1440821
+SLOW BSP STATS:
+  Number of nodes: 4030437
+  Number of leaf nodes: 2015219
+  Number of non empty leaves: 1962618
+  Average triangles per non empty leaf: 6.381953
+  Leaf nodes by depth:
+    00: 0
+    01: 0
+    02: 0
+    03: 0
+    04: 0
+    05: 0
+    06: 2
+    07: 12
+    08: 22
+    09: 72
+    10: 94
+    11: 132
+    12: 200
+    13: 363
+    14: 759
+    15: 1704
+    16: 3240
+    17: 6763
+    18: 13144
+    19: 23367
+    20: 38714
+    21: 56472
+    22: 74825
+    23: 89885
+    24: 101826
+    25: 109615
+    26: 112451
+    27: 110701
+    28: 107364
+    29: 100604
+    30: 90309
+    31: 77121
+    32: 65690
+    33: 57172
+    34: 51083
+    35: 47102
+    36: 44446
+    37: 43113
+    38: 42383
+    39: 42082
+    40: 41927
+    41: 41882
+    42: 41869
+    43: 41860
+    44: 41859
+    45: 41858
+    46: 41857
+    47: 41855
+    48: 41855
+    49: 41855
+    50: 83710
+total: 2015219
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Create fast BSP complete!
+All render jobs complete.
+
+Scene stats:
+Megacycles:39029.941406
+Render time total:13.971532
+Frame count: 12
+Triangles: 753064
+Rays/s: 9498629.000000
+
+Per frame stats:
+Render time: 1.164294s
+Primary rays: 11059200
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 11059200
+
+real	1m25.165s
+user	2m57.656s
+sys	0m1.234s
+
+Okay, pretty good stats. Remember this is the 1M version. We were getting about this with the 60k version, but fell right down with the 1M. So this is very encouraging.
+
+---
+
+Okay nice:
+
+MERC 1M Materials AA 64 CHUNKDIM 16 BSP DEPTH 50 O3 REF DEPTH 6
+
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Create fast BSP complete!
+All render jobs complete.
+
+Scene stats:
+Megacycles:1212564.000000
+Render time total:434.061005
+Frame count: 12
+Triangles: 753064
+Rays/s: 305741.343750
+
+Per frame stats:
+Render time: 36.171749s
+Primary rays: 11059200
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 11059200
+
+real	8m32.869s
+user	57m9.017s
+sys	0m9.192s
+
+So we *could* do our render with this.
+
+Still think we can get a 2-4x speedup on this however!
+
+Will do a 1M test render tonight.
+
+Things to fix in scene:
+
+Metal plates on door struts could be shorter. Half the distance from the strut to the end of the plate.
+Drum brakes would be good. At the high resolution, can really start to see through.
+low poly black, non reflecting discs would probably be just fine.
+Fix the little winker lights. Material, and the mesh could be better around the frame.
+Use 2:1 ratio screen. It's wierd, but will look good.
+
+See if we can smooth door edges. Look really bad at high resolution.
+
+
+Perf:
+
+Quick triangle count histogram would be nice. Can output so it's csv ready. Mostly interested in the voxels that only have 1 triangle in them...
+
+Then, should make the BSP mesh and see what we can do to create more empty leaves.
+
+As a final resort will look at rejigging the shaders and traversal so that all shaders are scalar, and primary rays are packet while secondary are single. Not sure how much speedup this will give however.
+
+And then of course there is AVX if we want to go there.
+
+---
+total: 2015219
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Create fast BSP complete!
+All render jobs complete.
+
+Scene stats:
+Megacycles:3043712.250000
+Render time total:1089.556396
+Frame count: 12
+Triangles: 753064
+Rays/s: 1903.159912
+
+Per frame stats:
+Render time: 90.796364s
+Primary rays: 172800
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 172800
+
+real	19m23.354s
+user	140m44.913s
+sys	0m21.333s
+
+For 6 bounces, aa 1.
+
+So pretty sure we're going to need a special reflection allowance for the lights only.
+
+---
+
+---
+
+Okay, first render looking ok.
+
+Some feedback:
+
+MESH CHANGES
+x See if we can smooth door edges. Look really bad at high resolution.
+      x Can't really without screwing with mesh. Will leave for now.
+x Struts. Front struts don't need much shortening at all if any, rear need more to match.
+x Drum brakes would be good. At the high resolution, can really start to see through.
+x     Low poly black, non reflecting discs would probably be just fine.
+x Curve at top of grill, would like to add more detail if poss. Shouldn't be hard.
+      Don't like that the body and grill have different levels of detail in that area. Will see how the render looks, might be better to add more polys.
+x Fix the little winker lights. Material, and the mesh could be better around the frame.
+x Make winkers glass with reflector?
+x Just noticed that there's no gearstick either...
+x Interior, need to establish what is carpet, but the floor near the accelaration pedals looks a little strange being shiney like that.
+
+> Need to make a new fresnel lens. Should have the word KAPSY on it.
+> And bump map?
+
+Reinforcement around doors? Highlights the importance of obtaining a good model.
+    Yeah, looks very flimsy...
+60 fps? If we can, why not...
+
+RAY TRACER
+Tonight:
+> Would also like to increase the aperture just a tad, but will try stratifying the samples first.
+> Overall, a little washed out. Could maybe post process or try adjusting the curve a little.
+Need proper ray counts... Every time we split...
+So another thing I want to do is stratify the dof samples... Otherwise we need many more just to get a decent bokeh.
+No reason we shouldn't be able to do motion blur.
+    Not sure what kind of effect this is going to have or if it's going to be worth it, but should try.
+Clamp reflection angles for body paint? Still some noise around the wheel arches.
+Should still pursue optimizations. Allows higher quality, ability to try more things.
+White panel itself (lambertian) doesn't look good either. Noisy...
+    Could probably fix this with a better reflection function (cosine?) for our lambert reflections.
+
+MATERIALS
+x Interior, need to establish what is carpet, but the floor near the accelaration pedals looks a little strange being shiney like that.
+    x Looking at ref photos, tan looks reflective.
+    Thinking a tan interior might look better...
+x Tyres could be shinier to make them look new. Could be a little darker too.
+x Shiny steering wheel.
+x   White trim material.
+
+Sky could be redder at its reddest.
+Instrument panel texture missing.
+Instrument panels should be texture + fresnel glass. Same with rear lights.
+> Headlamps look good, could be better with the right fresnel lens texture.
+> Less reflections around wheels? Look a little too bright now.
+
+---
+
+2ND RENDER STATS:
+
+Scene stats:
+Megacycles:38214176.000000
+Render time total:13679.513672
+Frame count: 300
+Triangles: 773688
+Rays/s: 183967.234375
+
+Per frame stats:
+Render time: 45.598377s
+Primary rays: 8388608
+Split packet rays: 0
+ c/rt_main.cc  d/merc_300sl_24_gear_stick.mtl  build.sh                                                                                                                                       X
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 8388608
+
+real	229m16.516s
+user	1768m19.980s
+sys	2m48.126s
+
+So a bit slower with the extra reflections.
+
+---
+
+2nd render feedback:
+
+MESH CHANGES
+
+Winkers, not sure solid glass is a good idea, inverts the reflection.
+
+x Reinforcement around doors? Highlights the importance of obtaining a good model.
+    Yeah, looks very flimsy...
+    Yeah, don't want to get too carried away, but think that this is a must.
+x Would like to fix the door sills too. All would do would be to bring the bent body bit back, expand interior, and add black rubber seal. Next time just get a better model and focus on accelaration structures. Don't want to dwell on this but I should do it right.
+    Okay, this is the LAST THING I'm going to do to this model... FFS.
+x Tyre tracks in the sand. Yeah we kind of need these.
+Don't want to get too carried away, there are so many things that we could do, but that aren't going to have a huge effect on the overall image.
+
+
+RAY TRACER
+
+x 60 fps looks good, but way too fast. 5 revs/sec. Need to make it more like 10.
+
+> Clamp reflection angles for body paint? Still some noise around the wheel arches.
+Need a way of reading a disp coeff for materials. Could delay displacement map creation?
+
+Need proper ray counts... Every time we split...
+So another thing I want to do is stratify the dof samples... Otherwise we need many more just to get a decent bokeh.
+Would also like to increase the aperture just a tad, but will try stratifying the samples first.
+No reason we shouldn't be able to do motion blur.
+    Not sure what kind of effect this is going to have or if it's going to be worth it, but should try.
+
+Should still pursue optimizations. Allows higher quality, ability to try more things.
+White panel itself (lambertian) doesn't look good either. Noisy...
+    Could probably fix this with a better reflection function (cosine?) for our lambert reflections.
+Ideally, should be some smoothing/delay on the auto focus.
+
+MATERIALS
+Sky could be redder at its reddest.
+> Instrument panels should be texture + fresnel glass. Same with rear lights.
+
+> Less reflections around wheels? Look a little too bright now.
+      Yeah, could try either pushing the reflections more, or could wind back for consistency. Would like to see what they look like at high ref.
+
+Slightly less body fresnel???
+
+---
+
+NEW LIST OF BIG CHANGES TO GET THIS THING DONE
+
+IN PRIORITY ORDER
+
+x Tyre tracks
+      > Need to figure our lambert shading, doesn't seem right
+
+x Motion blur
+      Trying out shitty version first.
+      Yeah, ghosting. Better than not, but real motion blur would still be nice to try...
+      Would take some thought so will leave till last. Next render try a slightly higher mix.
+      Yeah, the ghosting isn't that nice really.
+      If we do time simulation will def to the simplest thing first.
+
+x Want to try chrome with less/no blur?
+      x Not sure I like. Would really have to do the same to the body paint.
+      x Maybe just tone it down a little.
+
+x Sample stratification
+      Works well for AA, need something different for blur.
+x Raise struts slightly fatter, higher
+x Fix winkers.
+x Rear of body sides not smooth.
+x Make lens more shallow?
+Door latches/locks
+
+x Make the fresnel lens a sharper normal angle.
+x Tyres still too bright. Like the reflectance but need to be pretty dark where not reflecting.
+
+Video washed out, check ffmpeg settings. Probably due to fake blur...
+
+---
+
+NEW LIST OF BIG CHANGES TO GET THIS THING DONE
+
+IN PRIORITY ORDER
+
+Ideally, would have some footsteps leading away from the car with a figure in the background. Then the image tells a story. This wouldn't be hard...
+
+x Proper motion blur, time simulation.
+      Looking okay, needs a couple of things:
+      x Need tone mapping to be a separate step after blur
+      x Same with clamping.
+
+      x Need to specify a shutter time, so we can effectively control it independent of frame rate.
+      - Might still make sense to stratify several samps for each t increment.
+      - Need to stratify blur samples... Will have to find a way to do this.
+
+Autofocus:
+      > Need a get ray function that only uses u, v coords.
+      - Autofocus find best aperture.
+      - Still keen to use ziggurat normal distribution.
+
+We are SO close. Just a little more to go.
+
+Just looking at render now.
+
+x A bit dark overall. Just very slightly.
+x DOF should be reduced by another 3rd
+x Make the rubber a little shinier. I really want it to look good.
+x Make the focus update slightly faster. Maybe .233
+Would like to try 128 rpp to see what it looks like.
+    Need to have a way of skipping frames but keeping simulation up
+
+> Remaining ray count esp for wheels and headlights.
+Actually harder than I thought to terminate based on that.
+Esp when we get mixed depth packets
+But will be worth it...
+
+So idea is
+- Ray hits chrome
+- Apply a +x firsthitbonus
+- only issue is knowing when to terminate
+- however, firsthitbonus should mean that the matset will always have that same depth
+- and since we get no more bonuses after that
+- there should never be the case of the same matset with different bonuses
+- so should be able to keep the depth as a single value for the packet.
+- and if it has a bonus or not
+
+---
+
+Todays render
+x DOF fine, although might be worth pulling down a little more.
+x Desparatily needs chrome fixes especially around the wheels and also the headlamps.
+x Need to be able to skip frames.
+x Stratify rpp samples
+x Done. But... Doesn't look better. Getting some aritfacts. Not good.
+x Not sure what is best here. Maybe try combo of aa and rpp for motion blur?
+x Okay, almost certain I know what the cause is
+x     The stratification is moving at the same rate as the subject for motion blur
+x     Meaning, if the speed of rotation is just right, you're inadvertently sampling the same point (or near enough) over and over.
+x     So a solution would be to randomize the order of the stratification.
+x     Moving things into AA as well would help, as long as we have enough samples to create a convincing motion blur.
+x
+x Still think we should stratify the dof samples. So as long as we know how many there are. I think that we tried this though? Maybe need to do polar?
+x Can we get away with one less bounce on the headlamps?
+x Yeah this is about half the speed of what it was at 64 rpp. Wondering if it's the fault of the extra bounces?
+
+So today, want to:
+x - Sort out disc strat. (Still need some form of in pixel strat)
+x       Okay, so issue is that we are stratify every sample for one iteration in the same direction. Not an issue for DOF, as the results are mixed anyway, but not good for motion blur.
+x       Ideally, each ray would have it's own completely random strat table, but for now, will try shuffling a single table and each sample has a different starting point on that table.
+- Sort out model stuff below.
+- Push out a couple of high res renders.
+
+Probably really need to do one more pass on the optimization. Otherwise, going to have issues trying to get this into hd.
+Should really profile to at least figure out what functions are taking the longest.
+
+xTilted wheels ain't too bad either. Have to confirm that the disc brakes aren't colliding with the rims.
+x    Might want to tilt the right wheel more slightly. Doesn't look quite right.
+x    Hmmm more I look at it, the overall angle is a bit half assed.
+x    Should either be straight, or _obviously_ tilted.
+x    Otherwise could just be mistaken as a bad model or something.
+x    Will try more tilting for next render and if that doesn't work will go back to straight.
+Give the winkers more a factor.
+x Adjust one of the seats so that they are not exactly the same. Need to find out if this can actually be done however.
+x Very slightly increase the tone mapping brightness.
+Pretty keen to try stratified aa too. Maybe 4 per ray? Not needed if HD 128 rpp.
+Let's wrap this up and get onto Variations!
+
+Okay, 128 HD test renders look really good. About 3 hours per 4 frames. Not a big deal if I can obtain a dedicated renderer. This would be a good investment. Lets see how many cores we can get on a Mac Mini.
+Might be cheaper to invest in a high spec PC (which we want anyway).
+    Considering setup time cost etc, might be better to push some more perf out of this thing. A 2x speedup would mean we should be able to get this done in less than a month.
+    Another option would be to use work machine at night? A bit dodgy - assume it won't go unnoticed.
+    OR, could try and push a render at work on this machine if we bring adaptor. Not easy though.
+
+Because even when the Merc is done, might want to try a few other renders just for fun.
+
+Only issues:
+> Confirm DOF is okay. Would like to try a 16 rpp half res full render. Will do this tonight.
+x - Confirm can see door windows in body reflections. Might need to add a body bonus there (at least 2).
+        Done. Longer but looks better.
+
+Might want to consider using Intel denoiser too. See how that works out.
+
+Maybe tyres need a reflection mask map so only the sides are reflected? Would be easy to do.
+
+Should write a blog post about stratifying samples for DOF and motion blur.
+Should definitely write a few blog posts. Limit to 15 minutes per post and then it's easy.
+
+---
+
+Okay, almost 36 hours of straight rendering and we're on frame 20.
+
+This is LONG. At this rate will be 40 days of straight rendering.
+
+So want to look at it this way:
+
+What if someone told me I only have a week to get this rendered?
+
+I would try the following:
+
+- See what kind of quick optimization wins we can acheive.
+      _Could_ even go as far as AVX2 for primary, split for secondary.
+- See what Intel denoise can do for us. Not sure it's going to handle motion blur that well but can try. If we could say half our ray count then would be worth it.
+Even just with these two we could get things down to a manageable ~10 days or less.
+- Cloud compute. Didn't want to go this far, but if we can get say, 40-80 cores on this then we can definitely get things done within a week, even without the optimizations.
+      Two issues:
+      Need to figure out how to get this thing running on Linux. Intrinsic function calls might be an issue.
+      Requires internet, which is problematic. Might have to go to a cafe for a day or something.
+      Cost. Could balloon if we don't watch it. Would start with low resolution test renders and see how they do.
+      But great thing is that it frees up our main machine.
+
+So will start profiling 1 rpp render and see what we can find there, see what we can improve with acceleration.
+
+---
+
+Profiling.
+
+Most interesting thing seems to be that the top level get ray function (primary) is extremely fast.
+Shader code takes more time than traversal.
+However on the second bounce TraverseTris goes from 190ms to 1.91s. Ouch Probably because there are more second bounces (two rays per bounce), but still...
+We also spend a shed load of time getting textures.
+Guessing we could really cut this down by doing everything single ray.
+
+So at this stage making TraverseTris4 faster should still be our biggest priority.
+    Even with caching issues a speedup here will help.
+    But should try and mitigate caching issues too.
+    So will print some more stats on our tree.
+        Okay so only 90k leaves with 1 tri. Much less than I thought.
+        Leaf nodes by depth around 40-50 looks very suspect to me.
+            Either our stats are wrong, or our tree is broken.
+            Depth stats look ok, can't see anything majorly wrong there.
+            Bunny stats we get the same thing.
+            Like we are accumulating or something.
+
+Would like to do a test where all mats are reflective to ensure packet coherence, and see how we profile then.
+    Tried, seems to be about a 10% difference. But doesn't guarantee that packets are staying coherent with full reflections. Should be a way to test this.
+    Yeah, it really doesn't have a huge impact. But need to confirm.
+    Okay done, so the difference is minimal. For lambertian, probably over 90% of the packets are split, for metal, way less than 10%. Yet there's only a miniscule difference in render time. Would like to see where it's going.
+
+    If we break down the render time here, for the first call to GetColorForRay4 in RenderChunk:
+
+    RandomInUnitSphere4 ()
+    30%
+    Holy moly, just got a 25% speedup on lambert by using my shitty random thing. Packet coherence is higher though, so might need something more robust here.
+    Okay, more like 10-15. Because the first way had an error that gave us more coherent packets.
+
+    TraverseTris4 ()
+    55-60% (first about 10%, second about 40%) - so we wouldn't get that much out of going to AVX yet.
+
+    So putting effort into speeding up TraverseTris is worth it.
+    Still confused as to why the second call to TraverseTris takes so much longer than the first, even for the metal when most of the packets are coherent.
+    My guess is that the rebounded packets don't hit anything so they have to traverse the whole branch of whatever tree they start in rather than early out.
+    Also the lambert traversals should take much longer simply because there are more packets that have to be traversed (more splits).
+    So thinking we should record the number of packets created somewhere.
+
+    Something like
+    Total Packets
+    Split Packets
+
+    Should be significantly more for Lambert.
+    METAL:
+Scene stats:
+Megacycles:39228.015625
+Render time total:14.042437
+Frame count: 540
+Triangles: 69451
+Rays/s: 2389502.000000
+
+Per frame stats:
+Render time: 0.026005s
+Primary rays: 62137
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 62137
+Total packets: 9996977
+Split packets: 355630
+
+real	0m15.317s
+user	0m28.265s
+sys	0m0.183s
+
+    LAMBERT:
+Scene stats:
+Megacycles:56751.164062
+Render time total:20.315191
+Frame count: 540
+Triangles: 69451
+Rays/s: 1651691.625000
+
+Per frame stats:
+Render time: 0.037621s
+Primary rays: 62137
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 62137
+Total packets: 11874352
+Split packets: 3435341
+
+real	0m21.630s
+user	0m40.831s
+sys	0m0.204s
+
+
+
+64 RPP CAR ONLY
+total: 510133
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Create fast BSP complete!
+001 ................................................................OK
+
+Scene stats:
+Megacycles:1733931.250000
+Render time total:620.694641
+Frame count: 540
+Triangles: 795000
+Rays/s: 216237.937500
+
+Per frame stats:
+Render time: 1.149435s
+Primary rays: 248551
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 248551
+Total packets: 417255049
+Split packets: 357842054
+
+real	11m32.502s
+user	82m27.950s
+sys	0m8.121s
+
+64 RPP CAR + CLOUDS ONLY
+total: 510133
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Create fast BSP complete!
+001 ................................................................OK
+
+Scene stats:
+Megacycles:2000674.250000
+Render time total:716.180481
+Frame count: 540
+Triangles: 795000
+Rays/s: 187407.687500
+
+Per frame stats:
+Render time: 1.326260s
+Primary rays: 248551
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 248551
+Total packets: 417131346
+Split packets: 357736289
+
+real	13m12.175s
+user	94m59.861s
+sys	0m9.329s
+
+---
+
+total: 510133
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Create fast BSP complete!
+001 ................................................................OK
+
+Scene stats:
+Megacycles:6919274.500000
+Render time total:2476.889893
+Frame count: 540
+Triangles: 795000
+Rays/s: 54188.007812
+
+Per frame stats:
+Render time: 4.586833s
+Primary rays: 248551
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 248551
+Total packets: 1573855815
+Split packets: 1507219359
+
+real	42m32.654s
+user	320m32.378s
+sys	0m40.856s
+
+---
+
+From 10 min to 43 min when we include our ground.
+
+---
+
+USING FAST RANDOMINSPHERE, NO GROUND
+
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Create fast BSP complete!
+001 ................................................................OK
+
+Scene stats:
+Megacycles:2030306.750000
+Render time total:726.788025
+Frame count: 540
+Triangles: 795000
+Rays/s: 184672.453125
+
+Per frame stats:
+Render time: 1.345904s
+Primary rays: 248551
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 248551
+Total packets: 418521321
+Split packets: 359189598
+
+real	13m26.680s
+user	92m46.256s
+sys	0m17.503s
+---
+
+LAMBERT GROUND NO NOISE:
+Scene stats:
+Megacycles:42037.230469
+Render time total:15.048051
+Frame count: 540
+Triangles: 12
+Rays/s: 8919277.000000
+
+NOISE
+Scene stats:
+Megacycles:253977.671875
+Render time total:90.916283
+Frame count: 540
+Triangles: 12
+Rays/s: 1476278.250000
+
+---
+
+80% time reduction - so should be able to do something here... Can we precompute the normal map?
+
+Yeah at the moment the normal map is killing us. Because we're literally calculating 4x the noise functions that we need to just to find the normal etc.
+
+Extreme solution would be to precalculate both at a predefined resolution.
+
+BUT will start off converting noise to SIMD, because that will help us for the sky anyway.
+
+Hmmm, it's pretty damn involved and not exactly cache friendly.
+
+Will get it going anyway, but quite keen to leave as scalar.
+
+Think we're far better to focus on getting a simple top down projection texture happening.
+
+-
+
+Other thing I've been thinking is that our glass and BRDFs are actually wasting a lot of rays.
+
+Because they converge really quickly, while other things like defocus take much longer. Meaning after they converge we're just using more rays than we need too. SO it's better to make them converge slowly, and will make increasing depth linear instead of the exponential mess it is now.
+
+// 4RPP 2 RAYS PER DIELECTRIC
+total: 510133
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Create fast BSP complete!
+001 ....OK
+
+Scene stats:
+Megacycles:116112.429688
+Render time total:41.564716
+Frame count: 540
+Triangles: 795000
+Rays/s: 201820.406250
+
+Per frame stats:
+Render time: 0.076972s
+Primary rays: 15534
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 15534
+Total packets: 25965519
+Split packets: 22243655
+
+---
+
+// 4RPP 1 RAY PER DIELECTRIC
+Scene stats:
+Megacycles:73467.171875
+Render time total:26.299013
+Frame count: 540
+Triangles: 795000
+Rays/s: 318970.437500
+
+Per frame stats:
+Render time: 0.048702s
+Primary rays: 15534
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 15534
+Total packets: 18340865
+Split packets: 15083645
+
+real	1m42.032s
+user	4m38.801s
+sys	0m1.104s
+
+---
+
+// 4RPP 1 RAY PER DIELECTRIC 1, ray body paint
+total: 510133
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Create fast BSP complete!
+001 ....OK
+
+Scene stats:
+Megacycles:48256.117188
+Render time total:17.274223
+Frame count: 540
+Triangles: 795000
+Rays/s: 485614.187500
+
+Per frame stats:
+Render time: 0.031989s
+Primary rays: 15534
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 15534
+Total packets: 11136248
+Split packets: 7912933
+
+real	1m33.451s
+user	3m28.197s
+sys	0m1.017s
+
+---
+
+// 128RPP 1 RAY PER DIELECTRIC 1, ray body paint
+Create fast BSP complete!
+093 .........................................................................................................................OK
+
+Scene stats:
+Megacycles:1188282.625000
+Render time total:425.369019
+Frame count: 540
+Triangles: 795000
+Rays/s: 596553.562500
+
+Per frame stats:
+Render time: 0.787720s
+Primary rays: 469917
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 469917
+Total packets: 265370310
+Split packets: 194715898
+
+real	8m24.954s
+user	54m5.521s
+sys	0m11.017s
+
+---
+
+Scene stats:
+Megacycles:61897.328125
+Render time total:22.157358
+Frame count: 540
+Triangles: 795000
+Rays/s: 378592.437500
+
+Per frame stats:
+Render time: 0.041032s
+Primary rays: 15534
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 15534
+Total packets: 14946921
+Split packets: 12648075
+
+real	1m41.743s
+user	4m8.525s
+sys	0m1.096s
+
+Okay, so we add 14 seconds with the ground alone. Pretty sure it's all due to the perlin noise.
+
+Even still, should only be about 12 mins per frame at 128rpp, which is a HUGE speedup, just by reducing the unnecessary rays.
+
+Should be able to get that down to about 5-6. At which point we don't even really need Cloud Compute.
+
+---
+
+4rpp simple lambert ground
+
+total: 510133
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Create fast BSP complete!
+092 ....OK
+
+Scene stats:
+Megacycles:65390.703125
+Render time total:23.407883
+Frame count: 540
+Triangles: 795000
+Rays/s: 358366.812500
+
+Per frame stats:
+Render time: 0.043348s
+Primary rays: 15534
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 15534
+Total packets: 14887662
+Split packets: 12605374
+
+---
+
+4rpp simple no ground
+
+total: 510133
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Create fast BSP complete!
+092 ....OK
+
+Scene stats:
+Megacycles:22379.988281
+Render time total:8.011355
+Frame count: 540
+Triangles: 795000
+Rays/s: 1047089.750000
+
+Per frame stats:
+Render time: 0.014836s
+Primary rays: 15534
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 15534
+Total packets: 6305229
+Split packets: 4040879
+
+So that's the real reason we're taking longer, over twice as many rays created when we add the ground.
+The perlin noise doesn't make as much of a difference as you think.
+---
+
+4pp ground normal only
+total: 510133
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Create fast BSP complete!
+092 ....OK
+
+Scene stats:
+Megacycles:59583.441406
+Render time total:21.329060
+Frame count: 540
+Triangles: 795000
+Rays/s: 393294.781250
+
+Per frame stats:
+Render time: 0.039498s
+Primary rays: 15534
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 15534
+Total packets: 14850709
+Split packets: 12521775
+
+real	1m37.807s
+user	4m0.177s
+sys	0m0.957s
+
+---
+4pp ground both
+total: 510133
+Setup Fast BSP Tree
+PoolAlloc g_fastnodes OK
+Create fast BSP complete!
+092 ....OK
+
+Scene stats:
+Megacycles:63738.625000
+Render time total:22.816490
+Frame count: 540
+Triangles: 795000
+Rays/s: 367655.500000
+
+Per frame stats:
+Render time: 0.042253s
+Primary rays: 15534
+Split packet rays: 0
+Split packet ratio: 0.000000
+Secondary rays: 0
+Total Rays: 15534
+Total packets: 14950412
+Split packets: 12651607
+
+real	1m39.560s
+user	4m11.894s
+sys	0m1.040s
+
+---
+
+About 7 minutes... Pretty dang good. And the glass doesn't look that bad. If I can get the denoiser working figure we can get away with 64pp.
+
+So all we really need to do is fix up that ground and we'll be away.
+
+---
+
+Okay, so the deal is that trying to replicate the resolution of the perlin noise in a texture that big is just impossible.
+
+As above the bottleneck was simply that we get about 2x the collisions with the ground in the scene.
+
+So next steps are to profile and see where else we could improve.
+
+Yeah, the noise is still strong, as expected. Seems we could maybe get a 5-7% speedup in there if we did something smarter.
+At the lower levels it takes up almost half the ray time...
+Will try 128 with lambert only.
+Okay, about 3x slower. Guess that's due to packet coherence?
+
+Not above trying the avx2 + single secondary rays thing. OR could trace fully incoherent packets only as single rays.
+
+Okay, looking at some more detailed split maps, I think what we can say is that blindly making all secondary rays single rays might not be that smart.
+
+Would be much better to only do so when there is only one active ray in the packet. So that's quite a bit of work, given that we would also have to converge at the end.
+
+So will leave it for now. If I were to go down that route I would try AVX2 first, and then look at just removing packets that only have one ray, to see how much of a difference that would actually make.
+
+Hmmm, just tried for what we have - from 22secs to 8. So while the speedup would never be that much, the potential is much larger than I thought.
+
+My hunch is that by tracing roughly half our rays as scalars and the other half as vectors, our thread/hyperthread usage will become much better than just tracing all vectors.
+
+Trying very simple create ray to see what our traversal cost is, and if we get a speedup.
+
+So the speedup is encouraging (over 2x), but many of these rays will produce reflections, so don't want to get my hopes up.
+
+Shaders are going to be difficult if we try and reuse the simd stuff. Might be easier to rewrite them scalar.
+Although shouldn't be too hard if we break out the shader into a separate function and make sure the single ray check also includes the out mask.
+Dare I say templates would work here. It might not be that hard to meta program something.
+
+Ok, so I think we're getting somewhere.
+
+Really need to cache our accel structure otherwise we're wasting massive amounts of time.
+
+---
+
+Okay, caching totally worth it.
+
+Now down to 336 seconds for 128rpp. Literally a tenth of where we were.
+
+That's 50 hours or a week if we run on the MBP at night.
+
+BUT, need to implement the rest of the shaders.
+
+Will start with sphere and see what kind of slowdown we get.
+
+Was almost considering an algorithm that just flat out rejects single rays, and then compensates with brightness.
+
+Anyway, will clean up what shaders we have and then move to scalar.
+
+> Getting some wierd moire patterns around the wheels. Need to investigate. Suspect it's just because we're not covering all scalar shaders.
+
+After that, probably best to see what the Intel denoiser can do for us.
+
+---
+
+Hmmm, so compared with all packets, we're getting some odd behavior.
+
+First of all, everything looks too bright, compared with all packets.
+
+And then we're getting strange artefacts... Such as lines in wheels, wheel arches not looking right.
+
+Everything sort of looks washed out. Wondering if it's due to the scalar rays getting extra bounces (due to direction)?.
+
+Or, we're choosing the scalar ray/mixing it in wrong.
+
+Or, our shaders are wrong.
+
+If I can't sort this out I'll go packets, but that two times speedup is hard to ignore.
+
+Going to leave it there, but need to investigate:
+
+Find out what's actually happening with the packet rays. Make sure the correct pixel is being turned into a scalar ray. There should be an easy way to test this.
+
+Turn them off entirely.
+
+Ensure bounces are the same for packet and scalar equivelent.
+
+OH just realized could be our random unit in disk. NOPE. Totally the same code.
+
+Must say it's super disappointing just how fast single rays are. In fact, faster than FULL SIMD. So thinking it might be worth breaking ANY split rays into single rays, not just splits that are single. Worth trying.
+Would also like to see how long each take. Packets with no splits only. VS the rest only (might be hard).
+
+Before we do that we have 3 things to deal with:
+x Dielectrics/Headlights.
+x Acne
+
+Hmmm hard to tell if this issue is because of NaNs etc or something else.
+
+Also confirmed that it's definitely coming from here: GetColorForRay.
+
+---
+
+Okay, so what we know is this:
+
+Only occurs in single ray code.
+Only occurs when loading headlight bump texture.
+Results in NaNs.
+So I'm thinking the best way is to hardcore deep dive into an exact pixel where this is happening and step through everything until we fine out where the NaNs are coming from.
+
+FOUND
+Process 97529 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = step over
+    frame #0: 0x000000010002557d rt_main`GetColorForRay(r=0x00007ffeefbfd610, object=0x0000000100078040, fastbsp=0x0000000101000000, seed=0x000000016285a630)*) at rt_main.cc:2573
+   2570	////     Which means any of the coefficients before that could be the cause.
+   2571
+   2572	                    // are our uvs wrong?
+-> 2573	                    v3 N1 = GetTextureNormal (mat, p, N0, T, u, v);
+   2574
+   2575	                    // this doesn't make a difference.
+   2576	        //// v34 N1_ = GetTextureNormal (mat, V34 (p), V34 (N0), V34 (T), _mm_set1_ps (u), _mm_set1_ps (v), MM_ALL);
+Target 0: (rt_main) stopped.
+(lldb)
+Process 97529 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = step over
+    frame #0: 0x0000000100025699 rt_main`GetColorForRay(r=0x00007ffeefbfd610, object=0x0000000100078040, fastbsp=0x0000000101000000, seed=0x000000016285a630)*) at rt_main.cc:2580
+   2577	        ////            v3 N1 = V3 (N1_.x[0], N1_.y[0], N1_.z[0]);
+   2578
+   2579	                    // move this to options
+-> 2580	                    float bias = 1e-3;
+   2581	                    v3 V = r->dir;
+   2582
+   2583	                    float VdotN0 = Dot (V, N0);
+Target 0: (rt_main) stopped.
+(lldb) p N0
+(v3) $8 = {
+   = (x = 0.0235187579, y = -0.389510095, z = -0.920721828)
+   = (r = 0.0235187579, g = -0.389510095, b = -0.920721828)
+   = (u = 0.0235187579, v = -0.389510095, w = -0.920721828)
+  e = ([0] = 0.0235187579, [1] = -0.389510095, [2] = -0.920721828)
+}
+(lldb) p N1
+(v3) $9 = {
+   = (x = NaN, y = NaN, z = NaN)
+   = (r = NaN, g = NaN, b = NaN)
+   = (u = NaN, v = NaN, w = NaN)
+  e = ([0] = NaN, [1] = NaN, [2] = NaN)
+}
+(lldb)
+
+
+Getting dem straight out of texture
+So either our inputs are wrong or something..
+
+OK appears T is NaN too, so not texture 
+
+Okay, object->tangents all NaNs
+
+Caused by tri uvs being 0
+
+Okay, so issue is that vts are defaulted to -1
+They then become -2 if no vt defined in obj
+Thing I don't get is that we should have a vt if there is a texture (lens). Shouldn't be possible to have an invalid T AND a texture. So that's what I really need to check for/assert on.
+In other words, T shouldn't be needed if there is no texture. If there is it should ALWAYS be valid.
+
+Thing is, we derive t from texture...
+
+so vt is pointing to what? texture index? mat index?
+
+is there any way of asserting
+if our tri has a texture norm
+then we should have a valid T
+Should be able to do this on load.
+
+OK, wierd, we're getting a Chrome with a tex.
+
+OK, false alarm. Thats fine. We have a default plain texture always.
+
+So should only check for T on 
+
+(lldb) p trivn
+(tri_t *) $2 = 0x00000001869ece10
+(lldb) p trivn->A
+(int) $3 = 14851
+(lldb) p object->tangents[trivn->A]
+(v3) $4 = {
+   = (x = -0.923795342, y = 0.0496260449, z = 0.379656911)
+   = (r = -0.923795342, g = 0.0496260449, b = 0.379656911)
+   = (u = -0.923795342, v = 0.0496260449, w = 0.379656911)
+  e = ([0] = -0.923795342, [1] = 0.0496260449, [2] = 0.379656911)
+}
+(lldb) p object->tangents[trivn->B]
+(v3) $5 = {
+   = (x = NaN, y = NaN, z = NaN)
+   = (r = NaN, g = NaN, b = NaN)
+   = (u = NaN, v = NaN, w = NaN)
+  e = ([0] = NaN, [1] = NaN, [2] = NaN)
+}
+(lldb) p object->tangents[trivn->C]
+(v3) $6 = {
+   = (x = -0.925673961, y = -0.00803953316, z = 0.378236771)
+   = (r = -0.925673961, g = -0.00803953316, b = 0.378236771)
+   = (u = -0.925673961, v = -0.00803953316, w = 0.378236771)
+  e = ([0] = -0.925673961, [1] = -0.00803953316, [2] = 0.378236771)
+}
+(lldb)
+
+Okay getting closer. only B is invalid (for headlamp bump map).
+
+Hmmmm. Should go through all tris wit that mat and brute force assert we have valid tangents...
+
+---
+
+Could get even more of a speed up by saving the model/scene in our native format too.
+
+Loading the OBJ is the bottleneck for us now.
+
+---
+
+So two functions we need to focus on are GetAttenuation4, and GetPerlin functions,
+And RandomInUnitSphere
+
+So for something like metal, no advantage to splitting?
+I'm still thinking that primary packets only could bring a speedup. Probably not that big though.
+
+>>> Should we try and get processer affinities working again?
+Yep, but need to get traverse wins first.
+
+Okay, good to speak to wife about everything. Should just put what I have up now, and then when we get the final render up there pin it.
+
+But we need to see what we can do with:
+"GetAttenuation4(texture*, float vector[4], float vector[4], v34)+0x104c"
+And going back to single rays for secondary might be really wise.
+
+---
+
+Okay no idea why normals are so fudgeing slow.
+
+But is encouraging otherwise.
+
+Just need to figure out this one issue.
+
+Profile.
+
+If we're going to keep doing this (say with avx), then probably a good idea to cache our accel structure. Iteration times will be much faster.
+
+Seems that our matrix multiply is to blame.
+
+---
+
+Plan is:
+Do a render every night adjusting little things.
+Need to tidy the code too.
+Hopefully will converge on something that looks good.
+Spend mornings and lunchtimes on Variations.
+Once we are happy with settings, do a full render. Might take a few nights. 128pp might take a very long time. Need something here. Speedups would help. Dedicated rendering machine would help... Might have to optimize here.
+Push to Git
+Write some blogs?
+Possibly do some knock off renders... Bunny etc.
+
+---
+
+Must say it's super disappointing just how fast single rays are. In fact, faster than FULL SIMD. So thinking it might be worth breaking ANY split rays into single rays, not just splits that are single. Worth trying.
+Would also like to see how long each take. Packets with no splits only. VS the rest only (might be hard).
+
+Packets with no splits is super fast. 3.5M rays/sec.
+
+---
+
+Okay, so looking ok. Might do one profile just to see if there are any obvious bottle necks, otherwise will have a look at this denoiser.
+
+Potential speedups:
+~10% of time is in GetAttenuation4, for perlin. Could SSE and or reuse.
+75% of time is single rays. Ideally would be less.
+Traverse Tris still takes a lot of the time.
+GetAttenuation for perlin (single) is still quite high.
+
+---
+
+MUST TRY SETTING THREAD AFFINITIES.
+Giving each chunk it's own mem buffer could help...
+Going to get on to the denoiser now.
+
+What buffers do we need?
+
+Color (what we use now)
+Albedo
+Normal
+Output
+
+How do we get them?
+
+So should be pretty damn simple. Just allocate two more screen buffers, and write to them with each hit.
+However we might need to output 3 colors for each get color function. No big deal.
+
+Wondering if we should test this out first? Nah, easier to work with buffers in mem. Lets do it.
+
+Okay, looking good. Just need to get single rays doing the same.
+
+I'm pretty convinced that we should be able to get a speedup by only splitting into scalar rays when the packet isn't coherent. We just need a fast way of checking the split (sign) criteria.
+
+---
+
+Okay, 64rpp looking real good. And insanely fast now.
+
+Could get a render going in just over 24 hours.
+
+Left to do:
+x Fix up center split packets.
+x Tone map color image.
+x Clamp color image.
+Compare 64rpp vs 121rpp.
+
+Wow, Okay, there is almost NO difference between the two.
+The only big difference is around the front tyre. Unquestionably, more rays looks better.
+Front view is the same. 64 is totally fine. There is _slightly_ more detail in the headlamp textures, but 64 is more than good enough.
+There are some differences in the blurring, but neither looks better.
+
+Look at some more speedups. Thread affinities, coherent packets.
+        thread_affinity_policy_data_t policy = {};
+
+Tried, doesn't do shit.
+
+Something I'm doing wrong? This is the kind of question I want to ask at WWDC.
+
+Maybe if we shift to Linux for the render this is something we can do properly.
+
+Need to ask around again and see if there's something that needs to be done here.
+
+Could try the pthread api.
+
+Look at second bounce stuff?
+
+Hmmm so going to take 28 hours or maybe 5 days at current rate.
+
+Or we could move to Google Linux with the hope that it would take half the time (but transferring results etc becomes annoying).
+
+Perlin noise costs us about 3-4 seconds. Which is significant.
+Ideally, we could SIMD-fy and share color result.
+
+Okay was able to move files to Debian VM. There are a shed load of errors, not to mention missing libs.
+
+It's going to take a while to sort all of that out, and I don't really want to without a common Github repo. So better we get on the net and pull and fix up from there.
+
+The more setup and crap I have to do just to make a cloud version work, the more I would rather put that time into improving the code we have and making it faster.
+
+I think it's more than fast enough for a first (and perhaps final) run.
+
+Don't want to make this renderer a permanent thing either, would rather work on another one with streaming packets than try and improve this one too much.
+
+Okay, think we should be okay for our animation.
+
+Want to pause while working and resume the process whenever I can today and get straight back onto Variations.
+
+The goal is to turn that into a product.
+
+So once the animation is done, if it's looking good, we have to tidy this code and put perhaps a bunny version up on Github.
+
+At this rate will probably take about 5-6 nights which is fine. If we were to do more I would look at optimizing aggressively but I think we're fine for now.
+
+---
+
+Okay animation done.
+
+Would like to try maybe one or two more:
+
+Merc, different color with checker background. Make the checkered background multi colored.
+    Could be totally garish, but even a chrome merc could be interesting.
+
+Glass bunny, and make that the default state of the Github.
+
+Would like to try another car but don't really have the time for it at the moment.
+
+Should get this on Github real soon. 
+
+---
+
+Okay plan is:
+x Fix up grill body reflections
+x Do a quick render of both red and hot wheels
+x Getting noise. Pretty adding sky normals to the normal map will help.
+      Can't sort this out. Just issues with the algorithm, which is a shame.
+      Might be an issue with our HDR sky? Try clamping the color buffer...
+x Also think the paint could still be "shinier" will play around a bit.
+      Might be worth making the red slightly darker too.
+      Looking real good with the tone mapping. Just want to try a slightly darker paint and then we're done.
+      Okay, just going to leave with what we had for the paint.
+      Really reached a point of diminishing returns with this, so should just push something out (16 or 32 is fine), and keep going.
+      Will give the hot wheels a shot too.
+      Really need to wrap this up. It's eating into Variations big time.
+
+Dicide which is better and full render
+Setup glass bunny, do something impressive
+clean code
+put on Github
+
+DONE
+
+---
+
+Just for the heck of it would be cool to do the same render (even with a different car) of this with a rainbow checkered background.
+
+---
+
+List of issues with blender to search the web:
+- Does not save texture paths (for Gullwing model only).
+- Can we render geometry normals only?
+- Easy way to make a new object from face selection?
+
+Tidy, get on Github. (Need to make a separate git repo without copyrighted binary files etc).
+
+AVX, FMAs etc. There are a whole bunch of SSE4 instructions that we should be using. max, min, sqrt etc.
+Should do these mini optimizations last as can eat up a lot of time.
+MC methods.
+
+As such, the RTRT kernel only supports packets with matching directions signs. Packets are automatically and quickly tested for complying to this rule, and non-complying rays are traced with the fast single-ray traversal code.
+

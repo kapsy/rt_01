@@ -1,0 +1,2 @@
+set makeprg=./build.sh
+nnoremap <Leader>kj :! ./build/ray_tra_ps_001<CR>

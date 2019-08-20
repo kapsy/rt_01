@@ -1,0 +1,19 @@
+target create ./build/rt_main
+
+# breakpoint set --line 5297
+
+# breakpoint set --file rt_aa_bsp.cc --line 827
+
+
+# breakpoint disable 2
+
+# breakpoint set --file rt_obj_loader.cc --line 525
+# breakpoint set --file rt_math.h --line 75
+
+# assign this to a macro - read m128 rmm
+# me rea -fb -s4 -c4 &yminmaskinv
+
+# command alias bfl breakpoint set -f %1 -l %2
+# command alias rmm memory read -fb -s4 -c4 %1
+
+run
