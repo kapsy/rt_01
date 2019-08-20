@@ -54,7 +54,6 @@ Swap (float &a, float &b)
     b = tmp;
 }
 
-
 // NOTE: (Kapsy) THIS IS MIT LICENSE CODE, WILL HAVE TO REMOVE AT SOME POINT.
 #define EXP_POLY_DEGREE 3
 
@@ -141,12 +140,6 @@ powf4(__m128 x, __m128 y)
    return exp2f4(_mm_mul_ps(log2f4(x), y));
 }
 
-
-
-
-
-
-
   //////////////////////////////////////////////////////////////////////////////
  //// Vector Math /////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -202,12 +195,6 @@ Clamp4 (m128 a, m128 min, m128 max)
 inline bool
 SignsMatch (m128 a)
 {
-    //// bool res =
-    ////     (((*(((unsigned int *)&a) + 0)) & 0x80000000) ==
-    ////      ((*(((unsigned int *)&a) + 1)) & 0x80000000) ==
-    ////      ((*(((unsigned int *)&a) + 2)) & 0x80000000) ==
-    ////      ((*(((unsigned int *)&a) + 3)) & 0x80000000));
-
     unsigned int A = ((*(((unsigned int *)&a) + 0)) & 0x80000000);
     unsigned int B = ((*(((unsigned int *)&a) + 1)) & 0x80000000);
     unsigned int C = ((*(((unsigned int *)&a) + 2)) & 0x80000000);
@@ -234,7 +221,7 @@ HaveBitsSet (m128 a)
 }
 
 
-// Should find a faster way to do this! Slow...
+// TODO: (Kapsy) Should find a faster way to do this! Slow...
 inline bool
 AllBitsSet4 (m128 a)
 {
@@ -455,7 +442,6 @@ SquaredLen (v3 &a)
     return (Dot (a, a));
 }
 
-
   //////////////////////////////////////////////////////////////////////////////
  //// SIMD Vector Math /////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -565,9 +551,6 @@ operator*(const v34 &a, const v34 &b)
 
     return (res);
 }
-
-
-
 
 inline v34
 operator+(const v34 &a, const v34 &b)
@@ -940,7 +923,7 @@ PointInRect (rect3 b, v3 a)
 #define NSPerUS (1000.0)
 #define NSPerMS (1000.0 * NSPerUS)
 
-// TODO: (KAPSY) Just use these guys!
+// TODO: (Kapsy) Just use these guys!
 #define SToUS(Value) ((Value) * USPerS)
 #define SToNS(Value) (Value * NSPerS)
 
