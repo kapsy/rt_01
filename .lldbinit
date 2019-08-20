@@ -4,7 +4,6 @@ target create ./build/rt_main
 
 # breakpoint set --file rt_aa_bsp.cc --line 827
 
-
 # breakpoint disable 2
 
 # breakpoint set --file rt_obj_loader.cc --line 525
