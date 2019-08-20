@@ -100,8 +100,8 @@ SeekUntilNextLine (tokenizer_t *tzer)
         tzer->at++;
     }
 
-    // jump over the newline char
-    // should while over here?.
+    // Jump over the newline char.
+    // Should while over here?
     tzer->at++;
 }
 
@@ -205,7 +205,7 @@ GetNextToken(tokenizer_t *tzer)
         SeekUntilNextLine(tzer);
     }
 
-    // seek up until next break - space, return, comment
+    // Seek up until next break - space, return, comment.
     token.chars = tzer->at;
 
     while (!((*tzer->at == ' ')  ||
@@ -218,7 +218,7 @@ GetNextToken(tokenizer_t *tzer)
         tzer->at++;
     }
 
-    // this should skip comments too.
+    // This should skip comments too.
     SkipWhiteSpace (tzer);
 
 
@@ -333,8 +333,6 @@ LoadMTLMaterial (object_t *object, char *mtlpath)
     fread ((void *) buf, len, 1, mtlfile);
     fclose (mtlfile);
 
-
-
       //////////////////////////////////////////////////////////////////////////
      //// Obtain Counts ///////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////
@@ -367,12 +365,6 @@ LoadMTLMaterial (object_t *object, char *mtlpath)
      //// Obtain Data /////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////
 
-    // test crap
-    // attach to objects.
-    // texture *ttest = &textures[texturecount++];
-    // ttest->type = TEX_PLAIN;
-    // ttest->albedo = V3 (1.f);
-
     object->matcount = newmtlcount;
     object->mats = (mat_t *)malloc(sizeof(mat_t)*object->matcount);
     mat_t *matat = object->mats;
@@ -396,10 +388,7 @@ LoadMTLMaterial (object_t *object, char *mtlpath)
                     matat->tex->type = TEX_PLAIN;
                     matat->tex->albedo = V3 (1.f);
 
-                    // testing only.
-                    //matat->type = MAT_LAMBERTIAN;
                     matat->type = MAT_NORMALS;
-
 
                     token = GetNextToken (tzer);
                     Assert (token.type == TokenTypeElement);
@@ -462,12 +451,6 @@ LoadMTLMaterial (object_t *object, char *mtlpath)
                     Assert ((token.type == TokenTypeFloat) || (token.type == TokenTypeInt));
                     matat->d = GetFloat (token);
 
-                    //// if(matat->d < 1.f)
-                    //// {
-                    //need a glass mat
-                    ////     matat->type = MAT_DIELECTRIC;
-                    //// }
-
                 } break;
 
             case TokenType_illum:
@@ -476,21 +459,13 @@ LoadMTLMaterial (object_t *object, char *mtlpath)
                     Assert (token.type == TokenTypeInt);
                     matat->illum = GetInt (token);
 
-                    ///if (matat->illum == 2)
-                    ///{
                     matat->type = MAT_LAMBERTIAN;
-                    ///}
-                    ///else if (matat->illum == 3)
-                    ///{
-                    ///    matat->type = MAT_METAL;
-                    ///}
 
                 } break;
 
             case TokenType_map_Kd:
                 {
-                    // fails b/c of absolute path
-                    //
+                    // Fails b/c of absolute path.
                     token = GetPathToken (tzer);
                     Assert (token.type == TokenTypePath);
 
@@ -500,7 +475,7 @@ LoadMTLMaterial (object_t *object, char *mtlpath)
                     strncpy(mappath, token.chars, pathlen);
                     mappath[pathlen - 1] = '\0';
 
-                    // make into texdiff
+                    // Make into texdiff.
                     matat->tex->type = TEX_BITMAP;
                     matat->tex->bufa.e =
                         stbi_load(mappath,
@@ -540,31 +515,30 @@ LoadMTLMaterial (object_t *object, char *mtlpath)
                         int cpp = buf.cpp;
 
                         // TODO: (Kapsy) Hmmm, is this anywhere to be found in the mat itself?
-                        // something wrong with our math if we have to bump this value by this much!?
-                        //float a = 9.99f;
-                        //float a = 3.99f;
+                        // Something wrong with our math if we have to bump this value by this much!?
+                        // float a = 9.99f;
+                        // float a = 3.99f;
                         float a = 3.1f;
 
-                        // hack to get lens sharper...
-                        //MercMatHeadlampLensBump
+                        // Hack to get lens sharper... Really not good to put here!
+                        // MercMatHeadlampLensBump
                         if ((matatindex - 1) == 9)
                         {
                             a = 3.1f;
                         }
 
-                        // hack for the winker
+                        // Hack for the winker.
                         if ((matatindex - 1) == 20)
                         {
                             a = 9.f;
                         }
 
-                        // make this temp
+                        // Make this temp.
                         unsigned char *dest = (unsigned char *)malloc (sizeof (unsigned char)*cpp*w*h);
 
                         float dividend = 1.f/(float)0xff;
 
                         for (int v=1 ; v<(h - 1) ; v++)
-                        //for (int v=(h - 1) ; v>=1 ; v--)
                         {
                             for (int u=1 ; u<(w - 1) ; u++)
                             {
@@ -577,7 +551,7 @@ LoadMTLMaterial (object_t *object, char *mtlpath)
                                 // pixel pointed to is top-left-most in the image. There is no padding between
                                 // image scanlines or between pixels, regardless of format. The number of
 
-                                // need to find out which direction y the algo expects, vs what the jpeg is actually doing.
+                                // Need to find out which direction y the algo expects, vs what the jpeg is actually doing.
                                 float tj0 = (float)*(buf.e + (v - 1)*w*cpp + u*cpp)*dividend;
                                 float tj1 = (float)*(buf.e + (v + 1)*w*cpp + u*cpp)*dividend;
 
@@ -585,8 +559,8 @@ LoadMTLMaterial (object_t *object, char *mtlpath)
                                 v3 T = V3 (0, 1, a*tj0 - a*tj1);
 
                                 v3 SxT = Cross (S, T);
-                                //v3 N = SxT/Length (SxT);
-                                 v3 N = V3 (-S.z, -T.z, 1.f)/sqrt (S.z*S.z + T.z*T.z + 1);
+                                // v3 N = SxT/Length (SxT);
+                                v3 N = V3 (-S.z, -T.z, 1.f)/sqrt (S.z*S.z + T.z*T.z + 1);
 
                                 // NOTE: (Kapsy) Normalize for texture..
                                 N.x = N.x*0.5f + 0.5f;
@@ -607,20 +581,13 @@ LoadMTLMaterial (object_t *object, char *mtlpath)
                         texnorm->bufa.e = dest;
 
                         matat->texnorm = texnorm;
-
-                        // just temp, all mat types should respond to the presence of a normal map!
-                        //matat->type = MAT_NORMAL_TEST;
                     }
-
-                    //// SeekUntilNextLine(tzer);
 
                 } break;
         }
     }
     while (token.type != TokenTypeStreamEnd);
 }
-
-
 
 static triels_t GetTriElements (tokenizer_t *tzer)
 {
@@ -736,8 +703,7 @@ LoadOBJObject (char *objpath, m44 T)
      //// Obtain Data /////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////
 
-
-    // test crap
+    // Test stuff.
     texture *ttest = &textures[texturecount++];
     ttest->type = TEX_PLAIN;
     ttest->albedo = V3 (1.f);
@@ -746,18 +712,14 @@ LoadOBJObject (char *objpath, m44 T)
     mat_t *matat = object->mats;
     *matat = (mat_t) { MAT_NORMALS, ttest };
 
-
-
-
-
-    // assumes all faces are tris
+    // Assumes all faces are tris.
     object->tricount = fcount;
     object->vertcount = vcount;
     object->vertnormcount = vncount;
     object->vertuvcount = vtcount;
     object->matcount = 0;
 
-    // rename to trivs or triverts
+    // Rename to trivs or triverts.
     object->tris = (tri_t *)malloc(sizeof(tri_t)*object->tricount);
     object->trivns = (tri_t *)malloc(sizeof(tri_t)*object->tricount);
     object->trivts = (tri_t *)malloc(sizeof(tri_t)*object->tricount);
@@ -896,7 +858,6 @@ LoadOBJObject (char *objpath, m44 T)
 
             case TokenType_s:
                 {
-
                     // NOTE: (Kapsy) We ignore smoothing for now.
                     token = GetNextToken (tzer);
                     Assert ((token.type == TokenTypeElement) || (token.type == TokenTypeInt));
@@ -905,7 +866,6 @@ LoadOBJObject (char *objpath, m44 T)
 
             case TokenType_f:
                 {
-
                     // NOTE: (Kapsy) We assume all faces are tris!
                     triels_t elA = GetTriElements (tzer);
                     triels_t elB = GetTriElements (tzer);
@@ -917,7 +877,7 @@ LoadOBJObject (char *objpath, m44 T)
                     triat->C = elC.v - 1;
                     triat++;
 
-                    // todo: use real mats
+                    // TODO: (Kapsy) Use real mats
                     *trimatat++ = matindex;
 
                     // NOTE: (Kapsy) Assign vertex normal indexes.
@@ -989,18 +949,13 @@ LoadOBJObject (char *objpath, m44 T)
         //// *normat++ = N;
     }
 
-
-
-
-
     object->aabb = aabb;
 
     free (buf);
 
-
     fclose (objfile);
 
-    //CreateDebugBoundingBox (*aabb);
+    // CreateDebugBoundingBox (*aabb);
 
     return (object);
 }
