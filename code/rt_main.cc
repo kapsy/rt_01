@@ -74,10 +74,6 @@ struct pixelbuffer_t
     char *postfix;
 };
 
-//// static pixelbuffer_t g_screenbuffer;
-//// static pixelbuffer_t g_albedobuffer;
-//// static pixelbuffer_t g_normalbuffer;
-//// static pixelbuffer_t g_outputbuffer;
 static pixelbuffer_t g_pixelbuffers[4] = {};
 // TODO: (Kapsy) Shove these into an enum.
 #define COLOR_INDEX 0
@@ -86,25 +82,19 @@ static pixelbuffer_t g_pixelbuffers[4] = {};
 #define OUTPUT_INDEX 3
 #define BUFFER_COUNT 4
 
-// maybe best to put in a settings thing...
+// TODO: (Kapsy) Maybe best to put in a settings struct...
 // NOTE: (Kapsy) We specify x and y so we can stratify.
 static int g_rppx = 4;
 static int g_rppy = 4;
-//static int g_rppx = 2;
-//static int g_rppy = 2;
 static int g_rppcount = g_rppx*g_rppy;
 #define BONUS_MOD 1
 
 static float g_rppinv = 1.f/(float)g_rppcount;
 
-///static float g_stratangles[484];
-///static int g_stratanglecount = 484;
-
 static float *g_stratangles;
 static int g_stratanglecount;
 
-
-// I would actually say this is a dumb idea, and should move back to the chunk thing.
+// NOTE: (Kapsy) I would actually say this is a dumb idea, and should move back to the chunk thing.
 // That way no multi thread cache contentions.
 static float g_stratdimx = 1.f/(float)g_rppx;
 static float g_stratdimy = 1.f/(float)g_rppy;
@@ -132,13 +122,6 @@ P32AssignNull (p32 &P32)
      P32 = 0;
 }
 
-////// 
-////// inline bool
-////// P32NotNull(p32 &P32)
-////// {
-//////     return(P32 != 0);
-////// }
-
 inline void
 _P32AssignP (p32 &P32, void *P)
 {
@@ -154,28 +137,6 @@ _P32AssignP (p32 &P32, void *P)
     }
 }
 
-///// // NOTE: (Kapsy) Shortcut to move a pointer without having to recalculate it's offset.
-///// inline void
-///// P32Move(p32 &P32, s32 AmountBytes)
-///// {
-/////     P32 -= AmountBytes;
-///// }
-///// 
-///// inline void
-///// P32AssignP32(p32 &P32To, p32 &P32From)
-///// {
-/////     if(P32NotNull(P32From))
-/////     {
-/////         s64 Offset = ((u8 *)&P32From - (u8 *)&P32To);
-/////         Assert(Offset >= S32_MIN && Offset <= S32_MAX);
-/////         P32To = (s32)Offset;
-/////     }
-/////     else
-/////     {
-/////         P32AssignNull(P32To);
-/////     }
-///// }
-
 #define P32ToP(P32, Type) (Type *)_P32ToP(P32)
 #define P32AssignP(P32, P) _P32AssignP(P32, (void *)P)
 
@@ -190,7 +151,6 @@ struct perlin
     int permy[PERLIN_N];
     int permz[PERLIN_N];
 
-    //float ranfloat[PERLIN_N];
     v3 randvec[PERLIN_N];
     float scale;
 };
@@ -206,8 +166,6 @@ InitPerlin(perlin *per, float scale)
 
     for (int i=0 ; i<N ; i++)
     {
-        //per->ranfloat[i] = drand48();
-
         per->randvec[i] = Unit (V3 (RandBipolar(), RandBipolar(), RandBipolar()));
 
         per->permx[i] = i;
@@ -229,7 +187,6 @@ InitPerlin(perlin *per, float scale)
         PermuteAxis (per->permy, i);
         PermuteAxis (per->permz, i);
     }
-
 }
 
 static float
@@ -290,16 +247,8 @@ GetNoise(perlin *per, v3 p)
         tempp = tempp*2.f;
     }
 
-
-    //return 0.5*(1 + sin(0.3*p.z + 6*fabs (accum)));
-
-    //return 0.5*(1 + sin(0.3*p.z + 6*fabs (accum) + 3.f));
-
     return 0.5*(1 + sin(0.2*p.z + 6*fabs (accum) + 2.f));
-
-
 }
-
 
   //////////////////////////////////////////////////////////////////////////////
  //// Perlin Noise ////////////////////////////////////////////////////////////
@@ -326,8 +275,6 @@ InitPerlin4 (perlin4 *per, float scale)
 
     for (int i=0 ; i<N ; i++)
     {
-        //per->ranfloat[i] = drand48();
-
         per->randvec[i] =
             Unit (V3 ( RndBi4(), RndBi4(), RndBi4()));
 
@@ -373,15 +320,6 @@ _GetNoise4 (perlin4 *per, v34 p)
             floor(p.z[1]),
             floor(p.z[2]),
             floor(p.z[3]));
-
-    ///m128 _i = _mm_set_ps (floor(p.x[0])
-    ///m128 _j = mm_floor_ps (p.y);
-    ///m128 _k = mm_floor_ps (p.z);
-
-
-    ////m128 _i = mm_floor_ps (p.x);
-    ////m128 _j = mm_floor_ps (p.y);
-    ////m128 _k = mm_floor_ps (p.z);
 
     m128 u = p.x - _i;
     m128 v = p.y - _j;
@@ -510,7 +448,7 @@ GetNoise2(perlin *per, v3 p)
         tempp = tempp*2.f;
     }
 
-    return (Clamp01 (accum*2.f));//_GetNoise (per, p)));
+    return (Clamp01 (accum*2.f));
 }
 
 static float
@@ -526,9 +464,7 @@ GetNoise3(perlin *per, v3 p)
         tempp = tempp*3.9f;
     }
 
-    //return fabs (accum);//0.5*(1 + sin(0.3*p.z + 6*fabs (accum)));
-
-        return (_GetNoise (per, p));
+    return (_GetNoise (per, p));
 }
 
 static float
@@ -544,7 +480,7 @@ GetNoise32(perlin *per, v3 p)
         tempp = tempp*2.f;
     }
 
-    return (Clamp01 (accum*2.f));//_GetNoise (per, p)));
+    return (Clamp01 (accum*2.f));
 }
 
 static perlin4 testperlin4;
@@ -597,7 +533,6 @@ GetTyreThing (v3 p)
     unsigned int t4 = (t4xres && t4zres);
 
     float res = (float)(!(t1 || t2 || t3 || t4));
-    //float res = (float)(!(t1 || t3));
 
     return (res);
 }
@@ -629,9 +564,13 @@ struct texture
 {
     texture_type type;
     v3 albedo;
-    perlin *perlin; // put these into a discriminated union
-    perlin4 *perlin4; // put these into a discriminated union
-    texbuf_t bufa; // rgb texture buffer
+
+    // TODO: (Kapsy) Put these into a discriminated union.
+    perlin *perlin;
+    perlin4 *perlin4;
+
+    // NOTE: (Kapsy) RGB texture buffer
+    texbuf_t bufa;
 };
 
 #define MAX_TEXTURES (1 << 6)
@@ -640,7 +579,6 @@ static int texturecount = 0;
 
 enum material_type
 {
-
     MAT_LAMBERTIAN_REFLECTION_MAP,
     MAT_DUMB_BRDF,
     MAT_CAR_PAINT,
@@ -650,6 +588,7 @@ enum material_type
     MAT_DIELECTRIC,
     MAT_BACKGROUND,
     MAT_SOLID,
+
     // NOTE: (Kapsy) Debug mats.
     MAT_NORMALS,
     MAT_WUV,
@@ -661,28 +600,26 @@ struct mat_t
     material_type type;
     texture *tex;
     texture *texnorm;
-    float fuzz; // metal only - move to discriminated union.
+    float fuzz; // TODO: (Kapsy) Metal only - move to discriminated union.
     float refindex;
     float reflfactor;
 
     char *name;
 
-    float Ns; // specular exponent, 0-1000
-    v3 Ka; // ambient color, RGB
-    v3 Kd; // diffuse color, RGB
-    v3 Ks; // specular color, RGB
-    v3 Ke; // ??
+    float Ns;     // specular exponent, 0-1000
+    v3 Ka;        // ambient color, RGB
+    v3 Kd;        // diffuse color, RGB
+    v3 Ks;        // specular color, RGB
+    v3 Ke;        // ??
     float Ni;
-    float d; // dissolved, transparency
-    int illum; // illumination model
+    float d;      // dissolved, transparency
+    int illum;    // illumination model
 
-float ksbase; // where 0 < ksbase <= 1
-float ksmax; // where ksbase < ksmax <= 1
-
-    float albedoblend; // how much of the original texture mix through. For dielectrics only.
+    float ksbase; // where 0 < ksbase <= 1
+    float ksmax;  // where ksbase < ksmax <= 1
 
     unsigned int depthbonus;
-    unsigned int remdepth; // rename to totaldepth
+    unsigned int remdepth; // TODO: (Kapsy) Rename to totaldepth
 };
 
 union tri_t
@@ -744,7 +681,6 @@ static light_t g_light = { V3 (1.f), Unit (V3 (0.3, -0.8, 0.5)), 4.0f };
 static float g_illum = 0.33f;
 static v3 g_illumcol = V3 (1.f, 0.8f, 0.4f);
 
-
 #define MAX_POINT_LIGHTS (1 << 4)
 static pointlight_t g_pointlights[MAX_POINT_LIGHTS] = {};
 static int g_pointlightscount = 0;
@@ -754,10 +690,10 @@ static int g_pointlightscount = 0;
 //////////////////////////////////////////////////////////////////////////////
 
 // NOTE: (Kapsy) Bounding box objects - for debugging only.
-//// static object bbobjects[MAX_OBJECTS];
-//// int bbobjectcount;
+// static object bbobjects[MAX_OBJECTS];
+// int bbobjectcount;
 
-// rename to hit_t
+// TODO: (Kapsy) Rename to hit_t
 struct hitrec
 {
     float dist;
@@ -771,7 +707,6 @@ struct hitrec4
     m128 dist;
     m128 u;
     m128 v;
-    //m128 tri;
     m128 hitmask;
 
     // TODO: (Kapsy) Make these into m128is!
@@ -781,7 +716,7 @@ struct hitrec4
 
 union ray
 {
-    // should remove this, never use and make it a struct.
+    // TODO: (Kapsy) Should remove this, never use and make it a struct.
     struct
     {
         v3 A, B;
@@ -819,29 +754,29 @@ union ray4
     struct
     {
         v34 A, B;
-    // TODO: (Kapsy) Fix this!!!!!!
-    m128 thit;
-    //m128 pad;
+        // TODO: (Kapsy) Fix this!
+        m128 thit;
+        // m128 pad;
 
-    int remdepth;
-    int havebonus;
+        int remdepth;
+        int havebonus;
 
-    int splitcount;
-    int pad1;
+        int splitcount;
+        int pad1;
     };
 
     struct
     {
         v34 orig, dir;
-    // TODO: (Kapsy) Fix this!!!!!!
-    m128 dnu;
-    //m128 pad;
+        // TODO: (Kapsy) Fix this!
+        m128 dnu;
+        //m128 pad;
 
-    int dnu1;
-    int dnu2;
+        int dnu1;
+        int dnu2;
 
-    int pad00;
-    int pad11;
+        int pad00;
+        int pad11;
     };
 
 };
@@ -857,7 +792,6 @@ inline ray4
 Ray4 (const v34 &a, const v34 &b)
 {
     ray4 res = { a, b };
-    //res.thit = _mm_set1_ps (MAXFLOAT);
     return (res);
 }
 
@@ -874,54 +808,32 @@ struct camera
 };
 
 
-//where -1 <= x <= 1
-//
-//x - drand48*(x - x*cos(x*M_PI))*0.5f;
-
 inline ray
 GetRay (camera *c, float s, float t, float stratangle)
 {
+
 #if 0
     // NOTE: (Kapsy) Random in unit disk.
-v3 rand;
-do
-{
-    ///float x = ((float)aw)*awd + drand48()*awd;
-    ///float y = ((float)ah)*ahd + drand48()*ahd;
-
-    // better to do this with vectors
-    // yeah, not so convinced this is the right way. Need to confirm distribution for a start.
-    // should at least use vectors here.
-    ///// float x = drand48()*2.f - 1.f;
-    ///// x = x - drand48()*(x - x*cos(x*M_PI));
-    ///// x = (x + 1.f)*0.5f;
-
-    ///// float y = drand48()*2.f - 1.f;
-    ///// y = y - drand48()*(y - y*cos(y*M_PI));
-    ///// y = (y + 1.f)*0.5f;
-
-    ///// rand = 2.f*V3 (x, y, 0) - V3 (1,1,0);
-    rand = 2.f*V3 (drand48(), drand48(), 0) - V3 (1,1,0);
-}
-while (Dot (rand, rand) >= 1.f);
+    v3 rand;
+    do
+    {
+        rand = 2.f*V3 (drand48(), drand48(), 0) - V3 (1,1,0);
+    }
+    while (Dot (rand, rand) >= 1.f);
     v3 rd = c->lensrad*rand;
 
 #else
-
+    // NOTE: (Kapsy) Depth/motion blur stratification.
     float mag = sqrt (drand48 ());
     v3 stratvector = V3 (cos (stratangle), sin (stratangle), 0.f)*mag;
     v3 rd = c->lensrad*stratvector;
+
 #endif
 
     v3 offset = c->u*rd.x + c->v*rd.y;
-
     ray res = Ray (c->origin + offset, c->lowerleft + s*c->horiz + t*c->vert - c->origin - offset);
     return (res);
 }
-
-
-
-
 
   //////////////////////////////////////////////////////////////////////////////
  //// Sphere //////////////////////////////////////////////////////////////////
@@ -931,7 +843,6 @@ struct sphere
 {
     v3 center;
     float rad;
-    //mat_t mat;
     int matindex;
 };
 
@@ -943,11 +854,10 @@ static void
 TraverseSpheres (ray *r, hitrec *hit)
 {
     float tnear = EPSILON;
-    float tfar = hit->dist; // should be thit, if we start using multiple boxes?
+    float tfar = hit->dist; // TODO: (Kapsy) Should be thit, if we start using multiple boxes?
 
     for (int i=0 ; i<spherecount ; i++)
     {
-
         float rad = spheres[i].rad;
         v3 center = spheres[i].center;
 
@@ -970,11 +880,6 @@ TraverseSpheres (ray *r, hitrec *hit)
                 hit->dist = t;
                 hit->primref = i;
                 hit->primtype = PrimTypeSphere;
-
-                //p = PointAt (r, t);
-                //N = (p - center)/rad;
-                //mat = &spheres[i].mat;
-                //collision = true;
             }
 
             t = (-b + sqrt(discriminant))/a;
@@ -985,11 +890,6 @@ TraverseSpheres (ray *r, hitrec *hit)
                 hit->dist = t;
                 hit->primref = i;
                 hit->primtype = PrimTypeSphere;
-
-                //// p = PointAt (r, t);
-                //// N = (p - center)/rad;
-                //// mat = &spheres[i].mat;
-                //// collision = true;
             }
         }
     }
@@ -999,7 +899,7 @@ static void
 TraverseSpheres4 (ray4 *r, hitrec4 *hit)
 {
     m128 tnear = _mm_set1_ps (EPSILON);
-    m128 tfar = hit->dist; // should be thit, if we start using multiple boxes?
+    m128 tfar = hit->dist; // TODO: (Kapsy) Should be thit, if we start using multiple boxes?
     m128 all = _mm_set1_epi32(0xffffffff);
 
     for (int i=0 ; i<spherecount ; i++)
@@ -1047,8 +947,6 @@ TraverseSpheres4 (ray4 *r, hitrec4 *hit)
             hit->primtype =
                 _mm_and_ps (hit->primtype, mthrough) +
                 _mm_and_ps (_mm_set1_ps (PrimTypeSphere), mthroughinv);
-
-
         }
     }
 }
@@ -1083,11 +981,11 @@ PoolAlloc (mempool_t *mempool, uint64_t size, unsigned int align)
     return (result);
 }
 
-// to move
+// TODO: (Kapsy) Move to headers.
 #import "rt_aa_bsp.cc"
 #import "rt_obj_loader.cc"
 
-// to move to camera section
+// TODO: (Kapsy) Move to camera section.
 inline float
 GetAutofocusDistance (camera *c, object_t *object, fastbsp_t *fastbsp, int nx, int ny)
 {
@@ -1125,8 +1023,8 @@ GetAutofocusDistance (camera *c, object_t *object, fastbsp_t *fastbsp, int nx, i
         float u = (float)pointx/(float)nx;
         float v = (float)pointy/(float)ny;
 
-        // a bit dumb, because we want to ignore dof
-        // need a simple collision function here.
+        // TODO: (Kapsy) A bit dumb, because we want to ignore DOF.
+        // TODO: (Kapsy) Need a simple collision function here.
         ray r1 = GetRay (c, u, v, 0.f);
 
         hitrec hit = {};
@@ -1139,8 +1037,7 @@ GetAutofocusDistance (camera *c, object_t *object, fastbsp_t *fastbsp, int nx, i
         {
             v3 p = (r1.orig + (hit.dist)*r1.dir);
             float pdist = Length (p - r1.orig);
-            //so targetfocusdist isn't getting updated
-
+            // So targetfocusdist isn't getting updated.
             if (pdist < minfocusdist)
             {
                 minfocusdist = pdist;
@@ -1163,11 +1060,9 @@ RandomInUnitSphere()
     return (v);
 }
 
-// takes up about a quarter of our render time
 inline v34
 RandomInUnitSphere4 ()
 {
-    //printf("RandomInUnitSphere4\n");
     m128 one = _mm_set1_ps (1.f);
     m128 two = _mm_set1_ps (2.f);
 
@@ -1208,7 +1103,6 @@ union randomunion_t
 
 typedef m128i randomseed_t;
 
-//static randomseed_t g_seed = _mm_set1_epi32 (1234);//, 23316, 235402, 9443);
 static randomseed_t g_seed = _mm_set_epi32 (1234, 23316, 235402, 9443);
 inline m128
 RandomUnilateral4 (randomseed_t *seed)
@@ -1231,20 +1125,12 @@ RandomBilateral4 (randomseed_t *seed)
     *seed = (*seed)*_mm_set1_epi32 (1103515245) + _mm_set1_epi32 (12345);
     u.epi32 = _mm_or_ps (_mm_and_si128 ((*seed), _mm_set1_epi32 (0x7fffff)), _mm_set1_epi32 (0x3f800000));
 
-    m128 res = u.ps;//MM_TWO*(u.ps - MM_ONE) - MM_ONE;
-
-    //// printf ("%f %f %f %f\n",
-    ////         res[0],
-    ////         res[1],
-    ////         res[2],
-    ////         res[3]);
-
+    m128 res = u.ps;
 
     return (res);
 }
 
 
-// One of the simplest ways to do this turns out to be exactly correct for ideal diffuse surfaces. (I used to do it as a lazy hack that approximates mathematically ideal
 inline v34
 RandomInUnitSphere4Fast (randomseed_t *seed)
 {
@@ -1279,21 +1165,11 @@ RandomInUnitSphereFast (randomseed_t *seed)
     return (v);
 }
 
-
-// no matter what I fucking do the stupid while loop is faster!!!!!
-// probably done everything we can here..
+// NOTE: (Kapsy) No matter what we do here the while loop seems to be faster!
 inline v34
 _RandomInUnitSphere4Fast (randomseed_t *seed)
 {
-
-       ///m128 x = RandomBilateral4 (seed);
-       ///m128 y = RandomBilateral4 (seed);
-       ///m128 z = RandomBilateral4 (seed);
-       //
-
-
     randomseed_t s = *seed;
-
 
     m128i c0 = _mm_set1_epi32 (1103515245);
     m128i c1 = _mm_set1_epi32 (12345);
@@ -1318,22 +1194,12 @@ _RandomInUnitSphere4Fast (randomseed_t *seed)
     y.ps -= MM_ONE;
     z.ps -= MM_ONE;
 
-
     v34 v = V34 (MM_ZERO);
     v.x = MM_TWO*x.ps - MM_ONE;
     v.y = MM_TWO*y.ps - MM_ONE;
     v.z = MM_TWO*z.ps - MM_ONE;
 
-    //v.x = x.ps;
-    //v.y = y.ps;
-    //v.z = z.ps;
-
     *seed = s;
-
-       //v = MM_TWO*V34 (x, y, z) - V34 (MM_ONE);
-
-    //while (HaveBitsSet (SquaredLen4 (v) >= MM_ONE));
-
 
     return (v);
 }
@@ -1378,26 +1244,21 @@ GetAttenuation (texture *tex, float u, float v, v3 p)
                 float m = 1.8f;
                 float o = 0.6f;
 
-                //float selector = sin(10.f*p.x)*sin(10.f*p.y)*sin(10.f*p.z);
                 float selector = sin(m*p.x + o)*sin(m*p.z + o);
 
                 if (selector > 0.f)
                     res = V3 (1.f, 0.5f, 1.f);
                 else
-                    //res = V3 (0.4f, 0.f, 1.0f);
                     res = V3 (0.35f, 0.f, 0.84f);
-                    //res = V3 (0.0f, 0.f, 0.f);
 
             } break;
 
         case TEX_BITMAP:
             {
-
                 v34 cheapres = GetAttenuation4 (tex, _mm_set1_ps (u), _mm_set1_ps (v), V34 (p));
                 res.x = cheapres.x[0];
                 res.y = cheapres.y[0];
                 res.z = cheapres.z[0];
-
 
             } break;
 
@@ -1409,8 +1270,6 @@ GetAttenuation (texture *tex, float u, float v, v3 p)
 
         case TEX_PERLIN:
             {
-                //res = V3 (1.0)*GetNoise (tex->perlin, p)*GetTyreThing(p);
-
                 res = V3 (1.0)*GetNoise (tex->perlin, p)*GetTyreThing(p);
                 res = res*tex->albedo;
 
@@ -1418,7 +1277,7 @@ GetAttenuation (texture *tex, float u, float v, v3 p)
 
         case TEX_PERLIN2:
             {
-                // slow way for now
+                // TODO: (Kapsy) Slow way for now.
                 res = V3 (1.0)*GetNoise2 (tex->perlin, p);
                 res = res*tex->albedo;
 
@@ -1439,8 +1298,6 @@ GetAttenuation (texture *tex, float u, float v, v3 p)
 
         case TEX_PERLIN3:
             {
-                //Assert ("These texture types are marked for removal.");
-
             } break;
 
         default:
@@ -1510,8 +1367,6 @@ GetAttenuation4 (texture *tex, m128 u, m128 v, v34 p)
 
        case TEX_BITMAP:
            {
-
-               // thinking that this is wrong, should have multiple textures per mat, rather than multiple buffers per tex.
                texbuf_t *buf = &tex->bufa;
 
 #if 0
@@ -1529,7 +1384,6 @@ GetAttenuation4 (texture *tex, m128 u, m128 v, v34 p)
                testbuf.e = &cols[0];
                buf = &testbuf;
 #endif
-
 
                if (buf->e) {
 
@@ -1578,8 +1432,8 @@ GetAttenuation4 (texture *tex, m128 u, m128 v, v34 p)
                            lerpoffset.y[i] = -0.5;
                        }
 
-                       // these should really be v2is
-                       // could make a v34 to SIMD the clamp.
+                       // TODO: (Kapsy) These should really be v2is.
+                       // Could make a v34 to SIMD the clamp.
 
                        v3 texela = V3 (texelposi.x[i] + xstride, texelposi.y[i] + ystride, 0.0);
                        v3 texelb = V3 (texela.x + 1, texela.y, 0.0);
@@ -1648,8 +1502,6 @@ GetAttenuation4 (texture *tex, m128 u, m128 v, v34 p)
                     res.z[i] = res0.z;
                 }
 
-                //// res = V34 (GetNoise4 (tex->perlin4, p));
-
                 res = res*V34(tex->albedo);
 
             } break;
@@ -1693,7 +1545,7 @@ GetAttenuation4 (texture *tex, m128 u, m128 v, v34 p)
             {
                 for (int i=0 ; i<SIMD_WIDTH ; i++)
                 {
-                    // slow way for now
+                    // NOTE: (Kapsy) Slow way for now.
                     v3 p0 = V3 (p.x[i], p.y[i], p.z[i]);
                     v3 res0 = V3 (1.0)*GetNoise3 (tex->perlin, p0);
 
@@ -1708,18 +1560,10 @@ GetAttenuation4 (texture *tex, m128 u, m128 v, v34 p)
 
         case TEX_PERLIN_NORMAL:
             {
-                // slow way for now
+                // NOTE: (Kapsy) Slow way for now.
 
                 float step = 0.1f;
-                //float a = 0.15f;
-
-                //float a = 1.5f;
-                //float a = 0.25f;
-
-                //float a = 0.7f;
                 float a = 0.1f;
-
-                //res = V34 (GetNoise4 (tex->perlin, p));
 
                 for (int i=0 ; i<SIMD_WIDTH ; i++)
                 {
@@ -1728,8 +1572,8 @@ GetAttenuation4 (texture *tex, m128 u, m128 v, v34 p)
                     v3 p0 = V3 (p.x[i], p.y[i], p.z[i]);
                     v3 basetexel = V3 (1.0)*GetNoise (tex->perlin, p0);
 
-                    // this could be problematic if our z is not constant.
-                    // might have to force it to a value.
+                    // TODO: (Kapsy) This could be problematic if our z is not constant.
+                    // Might have to force it to a value.
                     v3 pi0 = V3 (p.x[i] + step, p.y[i], p.z[i]);
                     v3 pi1 = V3 (p.x[i] - step, p.y[i], p.z[i]);
 
@@ -1750,49 +1594,18 @@ GetAttenuation4 (texture *tex, m128 u, m128 v, v34 p)
                     v3 S = V3 (1, 0, a*npi0*tpi0 - a*npi1*tpi1);
                     v3 T = V3 (0, 1, a*npj0*tpj0 - a*npj1*tpj1);
 
-                    //// float cn = 0.4f;
-                    //// float zpi0 = a*(GetNoise (tex->perlin, pi0)*cn + (1.f - cn)*GetTyreThing (pi0));
-                    //// float zpi1 = a*(GetNoise (tex->perlin, pi1)*cn + (1.f - cn)*GetTyreThing (pi1));
-                    //// float zpj0 = a*(GetNoise (tex->perlin, pj0)*cn + (1.f - cn)*GetTyreThing (pj0));
-                    //// float zpj1 = a*(GetNoise (tex->perlin, pj1)*cn + (1.f - cn)*GetTyreThing (pj1));
-
-                    //// v3 S = V3 (1, 0, zpi0 - zpi1);
-                    //// v3 T = V3 (0, 1, zpj0 - zpj1);
-
-                    //v3 S = V3 (1, 0, a*GetNoise (tex->perlin, pi0)*GetTyreThing(pi0) - a*GetNoise (tex->perlin, pi1)*GetTyreThing(pi1));
-                    //v3 T = V3 (0, 1, a*GetNoise (tex->perlin, pj0)*GetTyreThing(pj0) - a*GetNoise (tex->perlin, pj1)*GetTyreThing(pj1));
-                    // v3 S = V3 (1, 0, a*(1.f - GetNoise (tex->perlin, pi0)) - a*(1.f - GetNoise (tex->perlin, pi1)));
-                    // v3 T = V3 (0, 1, a*(1.f - GetNoise (tex->perlin, pj0)) - a*(1.f - GetNoise (tex->perlin, pj1)));
-
-                    //S.z = -S.z;
-                    //T.z = -T.z;
-
-                    //v3 S = V3 (1, 0, 0);
-                    //v3 T = V3 (0, 1, 0);
-
-
                     v3 SxT = Cross (S, T);
                     v3 N = SxT/Length (SxT);
 
-                    // Normalize for texture
+                    // NOTE: (Kapsy) Normalize for texture
                     N.x = N.x*0.5 + 0.5f;
                     N.y = N.y*0.5 + 0.5f;
                     N.z = N.z*0.5f + 0.5f;
 
-                    //v3 N = V3 (-S.z, -T.z, 1.f)/sqrt (S.z*S.z + T.z*T.z + 1);
-
-                    //N = basetexel;
-
-
                     res.x[i] = N.x;
                     res.y[i] = N.y;
                     res.z[i] = N.z;
-
                 }
-
-
-
-                //res = res*V34(tex->albedo);
 
             } break;
 
@@ -1801,7 +1614,6 @@ GetAttenuation4 (texture *tex, m128 u, m128 v, v34 p)
                 Assert ("Do nothing here.");
 
             } break;
-
     }
 
     return (res);
@@ -1844,7 +1656,6 @@ enum
             rnew.havebonus = 0; \
 
 
-// turn into macro?
 // TODO: (Kapsy) No reason we should have to pass matset mask here.
 inline v34
 GetTextureNormal (mat_t *mat, v34 p, v34 N0, v34 T, m128 u, m128 v, m128 matsetmask)
@@ -1853,7 +1664,7 @@ GetTextureNormal (mat_t *mat, v34 p, v34 N0, v34 T, m128 u, m128 v, m128 matsetm
 
     if (mat->texnorm)
     {
-        // Gram-Schmidt to get B.
+        // NOTE: (Kapsy) Gram-Schmidt to get B.
         // Slightly concerned that we aren't dealing with handedness here.
         v34 B = Cross (N0, Unit (T - Dot (T, N0)*N0));
 
@@ -1868,7 +1679,7 @@ GetTextureNormal (mat_t *mat, v34 p, v34 N0, v34 T, m128 u, m128 v, m128 matsetm
         v34 atten = GetAttenuation4 (mat->texnorm, _mm_and_ps (u, matsetmask), _mm_and_ps (v, matsetmask), p);
         v34 N1tangent = Unit (atten*V34 (MM_TWO) - V34 (MM_ONE));
 
-        // N1 would be the derived N, N0 would be the geometry N
+        // NOTE: (Kapsy) N1 would be the derived N, N0 would be the geometry N
         // maybe, could get the flat N too, but don't really need for now.
         res = Unit (N1tangent*tangenttoworld);
     }
@@ -1883,7 +1694,7 @@ GetTextureNormal (mat_t *mat, v3 p, v3 N0, v3 T, float u, float v)
 
     if (mat->texnorm)
     {
-        // Gram-Schmidt to get B.
+        // NOTE: (Kapsy) Gram-Schmidt to get B.
         // Slightly concerned that we aren't dealing with handedness here.
         v3 B = Cross (N0, Unit (T - Dot (T, N0)*N0));
 
@@ -1898,7 +1709,7 @@ GetTextureNormal (mat_t *mat, v3 p, v3 N0, v3 T, float u, float v)
         v3 atten = GetAttenuation (mat->texnorm, u, v, p);
         v3 N1tangent = Unit (atten*2.f - V3 (1.f));
 
-        // N1 would be the derived N, N0 would be the geometry N
+        // NOTE: (Kapsy) N1 would be the derived N, N0 would be the geometry N
         // maybe, could get the flat N too, but don't really need for now.
         res = Unit (N1tangent*tangenttoworld);
     }
@@ -1940,7 +1751,6 @@ ClampedReflection (v3 N0refl, v3 N1refl, v3 V)
     return (clampedrefl);
 }
 
-
 inline m128
 ReflectionProb (mat_t *mat, v34 V, v34 N1refl, m128 VdotN1, m128 intmask, m128 extmask)
 {
@@ -1959,10 +1769,8 @@ ReflectionProb (mat_t *mat, v34 V, v34 N1refl, m128 VdotN1, m128 intmask, m128 e
     // Should already be UNIT???!!!
     v34 unitV = Unit (V);
     m128 dt = Dot (unitV, N1refl);
-    //m128 dtmask = (dt > MM_ZERO);
     m128 discriminant = MM_ONE - niovernt*niovernt*(MM_ONE - dt*dt);
     m128 discmask = (discriminant > MM_ZERO);
-
 
     // NOTE: (Kapsy) Obtain reflection probability.
     m128 reflfactor = _mm_set1_ps(mat->reflfactor);
@@ -1984,33 +1792,21 @@ ReflectionProb (mat_t *mat, v3 V, v3 N1refl, float VdotN1, bool external)
     float cos = refrindex*lenVdotN1;
     if (external)
         cos = -1.f*lenVdotN1;
-        //_mm_and_ps(refrindex*lenVdotN1, intmask) +
-        //_mm_and_ps(MM_NEGONE*lenVdotN1, extmask);
 
     float niovernt = refrindex;
     if (external)
         niovernt = 1.f/refrindex;
-        /// _mm_and_ps(refrindex, intmask) +
-        /// _mm_and_ps(MM_ONE/refrindex, extmask);
 
     // Should already be UNIT???!!!
     v3 unitV = Unit (V);
     float dt = Dot (unitV, N1refl);
-    //float dtmask = (dt > MM_ZERO);
     float discriminant = 1.f - niovernt*niovernt*(1.f - dt*dt);
-    //float discmask = (discriminant > 0.f);
-
 
     // NOTE: (Kapsy) Obtain reflection probability.
-    //float reflfactor = _mm_set1_ps(mat->reflfactor);
     float reflprob = 1.f;
     if (discriminant > 0.f)
         reflprob = Schlick (cos, refrindex);
 
-    //// float reflprob =
-    ////     Clamp014( (_mm_and_ps (Schlick4 (cos, refrindex), discmask) +
-    ////                 _mm_and_ps (MM_ONE, MM_INV (discmask)))
-    ////             *reflfactor);
     reflprob = Clamp01 (reflprob*mat->reflfactor);
 
     return (reflprob);
@@ -2030,10 +1826,10 @@ struct colres4_t
     v34 N; // Normal
 };
 
-// pretty sure this is a massive source of slowdown once we get to single rays - as we still perform split checks
+// NOTE: (Kapsy) Pretty sure this is a massive source of slowdown once we get to single rays, we still perform split checks.
 static colres4_t GetColorForRaySplittingBySign (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, randomseed_t *seed);
 
-// would like to generate this both for single and sse...
+// TODO: (Kapsy) Would like to generate this both for single and sse...
 static v34
 GetBackgroundColor (ray4 *r4, mat_t *mat)
 {
@@ -2057,14 +1853,15 @@ GetBackgroundColor (ray4 *r4, mat_t *mat)
                 atan2(dirlocal.z[0], dirlocal.x[0]));
 
 
-    // must be an easy way to do this. not seeing it yet...
-    // almost certain we have to do this before we remove the -ve value.
+    // NOTE: (Kapsy) Setting up sun.
+    // Almost certain we have to do this before we remove the -ve value.
     // Maybe, add one?
-    // So it becomes
+    // So it becomes:
     // 2 - 1
     // 0 - 1
     // Need to confirm this though.
-    // Sounds reasonable though
+    // Sounds reasonable though.
+    //
     // So in that space we can just add our angle, zero point
     // and then move back to 0-1 space?
     // if we add .5
@@ -2106,25 +1903,20 @@ GetBackgroundColor (ray4 *r4, mat_t *mat)
     // 1 - 0
 
     m128 a0 = _mm_set1_ps (1.f/M_PI);
-
     phi = phi*a0;
-
     phi = phi + _mm_set1_ps (1.f);
 
-    //phi = phi + _mm_set1_ps (1.58); // from front of car
-    //phi = phi + _mm_set1_ps (0.6); // if we want to delay suns appearence a little
+    // NOTE: (Kapsy) Trying different sun angles.
+    // phi = phi + _mm_set1_ps (1.58); // from front of car
+    // phi = phi + _mm_set1_ps (0.6); // if we want to delay suns appearence a little
     phi = phi + _mm_set1_ps (0.4); // like this best so far. Need to see how animates.
-
 
     m128 wrapmask = (phi > _mm_set1_ps(2.f));
     phi = _mm_and_ps ((phi - _mm_set1_ps (2.f)), wrapmask) + _mm_and_ps (phi, MM_INV (wrapmask));
-
     phi = phi - _mm_set1_ps (1.f);
 
     m128 t0 = _mm_sqrt_ps(phi*phi);
-
     v34 hcol = (MM_ONE - t0)*hcola + t0*hcolb;
-
 
     // NOTE: (Kapsy) Latitude interpolate.
     m128 theta =
@@ -2192,9 +1984,6 @@ GetBackgroundColor (ray4 *r4, mat_t *mat)
 
     // NOTE: (Kapsy) Mix sky and clouds.
     v34 hitcol = skycol*(MM_ONE - cloudmix.x) + cloudcol*cloudmix.x;
-
-    //hitcol = hitcol*_mm_set1_ps (1.1f);
-
     I = (hitcol & hitmaskp) + (skycol & MM_INV (hitmaskp));
 
     return (I);
@@ -2253,12 +2042,10 @@ GetColorForRay (ray *r, object_t *object, fastbsp_t *fastbsp, randomseed_t *seed
     v3 T = V3 (0.f);
     v3 p;
 
-    //v34 Ns; // Surface Normal
     float u;
     float v;
 
     if (hit.dist < MAXFLOAT)
-        ///     if (0)
     {
         int primtype = hit.primtype;
         int primref = hit.primref;
@@ -2316,7 +2103,7 @@ GetColorForRay (ray *r, object_t *object, fastbsp_t *fastbsp, randomseed_t *seed
             u = uvres.e[0];
             v = uvres.e[1];
 
-            // quicker to calc at point of collision?
+            // TODO: (Kapsy) Quicker to calc at point of collision?
             N = Unit (hitw*A + hitu*B + hitv*C);
             p = r->orig + hit.dist*r->dir;
             T = Unit (hitw*TA + hitu*TB + hitv*TC);
@@ -2338,7 +2125,6 @@ GetColorForRay (ray *r, object_t *object, fastbsp_t *fastbsp, randomseed_t *seed
             // TODO: (Kapsy) Need to think about this more, just going to cover top down for now.
             // Probably want to tie the coordinate system to the texture.
 #if 1
-            //v3 B =
             // TODO: (Kapsy) Not sure what this should be!
             T = V3 (1.f, 0.f, 0.f);
 
@@ -2360,13 +2146,9 @@ GetColorForRay (ray *r, object_t *object, fastbsp_t *fastbsp, randomseed_t *seed
 
             u = one - (phi + pi)*(piinv*half);
             v = (theta + pi*half)*piinv;
-
 #endif
 
         }
-
-
-
     }
     else
     {
@@ -2376,10 +2158,6 @@ GetColorForRay (ray *r, object_t *object, fastbsp_t *fastbsp, randomseed_t *seed
 
 
     mat_t *mat = object->mats + matindex;
-
-    // just testing
-    //
-    int type = MAT_DUMB_BRDF;
 
     // Move this to settings.
     float bias = 1e-3;
@@ -2502,12 +2280,8 @@ GetColorForRay (ray *r, object_t *object, fastbsp_t *fastbsp, randomseed_t *seed
                     float lenVdotN1 = VdotN1/Length (r->dir);
 
                     float cos = extmask ? -1.f*lenVdotN1 : refrindex*lenVdotN1;
-                    //                        _mm_and_ps(refrindex*lenVdotN1, intmask) +
-                    //                        _mm_and_ps(MM_NEGONE*lenVdotN1, extmask);
 
                     float niovernt = extmask ? 1.f/refrindex : refrindex;
-                    //                        _mm_and_ps(refrindex, intmask) +
-                    //                        _mm_and_ps(MM_ONE/refrindex, extmask);
 
                     v3 unitV = Unit (V);
                     float dt = Dot (unitV, N1refl);
@@ -2515,35 +2289,19 @@ GetColorForRay (ray *r, object_t *object, fastbsp_t *fastbsp, randomseed_t *seed
                     float discmask = (discriminant > 0.f);
 
                     // NOTE: (Kapys) Obtain the reflection probability.
-                    //float reflfactor = mat->reflfactor;
                     float reflprob = Clamp01 ((discmask ? Schlick (cos, refrindex) : 1.f)*mat->reflfactor);
-
-
-                    ////    Clamp014 ((_mm_and_ps (Schlick4 (cos, refrindex), discmask) +
-                    ////                _mm_and_ps (MM_ONE, MM_INV (discmask))) *reflfactor);
-
-                    ////float reflmask = RandomUnilateral4 (seed) <= reflprob;
-
 
                     // NOTE: (Kapsy) Obtain refraction vector.
                     v3 refr = Unit (niovernt*(unitV - N1refl*dt) - N1refl*sqrt (discriminant));
                     if (Dot (refr, N0refl) > 0.f)
                         refr = clampedrefl;
 
-                    //// float refrover = (Dot (refr, N0refl) > MM_ZERO);
-                    //// v3 refrres = (refr & MM_INV (refrover)) + (clampedrefl & refrover);
-
                     // NOTE: (Kapsy) Obtain reflection vector.
                     v3 refl = Unit (V + negVdotN1refl*2.f*N1);
                     if (Dot (refl, N0refl) < 0.f)
                         refl = clampedrefl;
-                    //// float reflover = (Dot (refl, N0refl) < MM_ZERO);
-                    //// v3 reflres = (refl & MM_INV (reflover)) + (clampedrefl & reflover);
 
                     // NOTE: (Kapsy) Create new ray and get color.
-                    ///v3 newbias = (N0refl*bias & reflmask) + (N0refl*MM_NEGONE*bias & MM_INV (reflmask));
-                    ///v3 rnewdir = (reflres & reflmask) + (refrres & MM_INV (reflmask));
-
                     v3 rnewdir;
                     v3 newbias;
                     m128 random = RandomUnilateral4 (seed);
@@ -2558,34 +2316,16 @@ GetColorForRay (ray *r, object_t *object, fastbsp_t *fastbsp, randomseed_t *seed
                         newbias = N0refl*-1.f*bias;
                     }
 
-                    //if (!(Length (rnewdir) >= 0.0f))
-
-                    //// if (
-                    ////         (rnewdir.x != rnewdir.x) ||
-                    ////         (rnewdir.y != rnewdir.y) ||
-                    ////         (rnewdir.z != rnewdir.z))
-                    //// {
-
-                    ////     I = V3 (1, 0, 0);
-                    //// }
-                    //// else
-                    //// {
-
-                    //ray rnew = Ray (p + newbias, rnewdir);
                     ray rnew = Ray (p + newbias, rnewdir);
                     ApplyBonus (rnew, r, mat);
 
                     colres_t col1 = GetColorForRay (&rnew, object, fastbsp, seed);
                     col0.I = A*col1.I;
-
-
-                    ///}
                 }
 
                 res.I += col0.I;
                 res.A += col0.A;
                 res.N += col0.N;
-
 
             } break;
 
@@ -2615,11 +2355,8 @@ GetColorForRay (ray *r, object_t *object, fastbsp_t *fastbsp, randomseed_t *seed
                     v3 negV = V*-1.f;
 
                     float negVdotN0 = Dot (negV, N0);
-                    //float negVdotN1 = Dot (negV, N1);
 
                     // NOTE: (Kapsy) Find which side of the actual geometry the ray is on.
-                    /// float extmask = (negVdotN0 > MM_ZERO);
-                    /// float intmask = MM_INV (extmask);
                     bool extmask = (negVdotN0 > 0.f);
 
                     // NOTE: (Kapsy) Normal for reflected geometry rays.
@@ -2630,11 +2367,6 @@ GetColorForRay (ray *r, object_t *object, fastbsp_t *fastbsp, randomseed_t *seed
                     float negVdotN1refl = Dot (negV, N1refl);
 
                     v3 clampedrefl = ClampedReflection (N0refl, N1refl, V);
-
-                    // NOTE: (Kapsy) Obtain reflection color.
-                    //v3 refl = Unit (V + negVdotN1refl*MM_TWO*N1);
-                    //float reflover = (Dot (refl, N0refl) < MM_ZERO);
-                    //v3 reflres = (refl & MM_INV (reflover)) + (clampedrefl & reflover);
 
                     // NOTE: (Kapsy) Obtain reflection vector.
                     v3 refl = Unit (V + negVdotN1refl*2.f*N1 + mat->fuzz*RandomInUnitSphereFast (seed));
@@ -2680,11 +2412,8 @@ GetColorForRay (ray *r, object_t *object, fastbsp_t *fastbsp, randomseed_t *seed
                     v3 negV = V*-1.f;
 
                     float negVdotN0 = Dot (negV, N0);
-                    //float negVdotN1 = Dot (negV, N1);
 
                     // NOTE: (Kapsy) Find which side of the actual geometry the ray is on.
-                    /// float extmask = (negVdotN0 > MM_ZERO);
-                    /// float intmask = MM_INV (extmask);
                     bool extmask = (negVdotN0 > 0.f);
 
                     // NOTE: (Kapsy) Normal for reflected geometry rays.
@@ -2695,11 +2424,6 @@ GetColorForRay (ray *r, object_t *object, fastbsp_t *fastbsp, randomseed_t *seed
                     float negVdotN1refl = Dot (negV, N1refl);
 
                     v3 clampedrefl = ClampedReflection (N0refl, N1refl, V);
-
-                    // NOTE: (Kapsy) Obtain reflection color.
-                    //v3 refl = Unit (V + negVdotN1refl*MM_TWO*N1);
-                    //float reflover = (Dot (refl, N0refl) < MM_ZERO);
-                    //v3 reflres = (refl & MM_INV (reflover)) + (clampedrefl & reflover);
 
                     // NOTE: (Kapsy) Obtain reflection vector.
                     v3 refl = Unit (V + negVdotN1refl*2.f*N1 + mat->fuzz*RandomInUnitSphereFast (seed));
@@ -2762,7 +2486,6 @@ GetColorForRay (ray *r, object_t *object, fastbsp_t *fastbsp, randomseed_t *seed
                         col0.N = (N1 + V3 (1.f))*V3 (0.5);
                     }
 
-
                     v3 V = r->dir;
 
                     float VdotN0 = Dot (V, N0);
@@ -2771,14 +2494,9 @@ GetColorForRay (ray *r, object_t *object, fastbsp_t *fastbsp, randomseed_t *seed
                     v3 negV = V*-1.f;
 
                     float negVdotN0 = Dot (negV, N0);
-                    //float negVdotN1 = Dot (negV, N1);
 
                     // NOTE: (Kapsy) Find which side of the actual geometry the ray is on.
                     // Don't need to do this for reflection only!
-                    //float extmask = (negVdotN0 > MM_ZERO);
-                    //float extmask = (negVdotN0 > MM_ZERO);
-                    //float intmask = MM_INV (extmask);
-
                     bool extmask = (negVdotN0 > 0.f);
 
                     // rename to out???
@@ -2869,7 +2587,6 @@ GetColorForRay (ray *r, object_t *object, fastbsp_t *fastbsp, randomseed_t *seed
                     // NOTE: (Kapsy) Normal for reflected normal map rays.
                     v3 N1refl = N1;
 
-
                     float negVdotN1refl = Dot (negV, N1refl);
 
                     v3 clampedrefl = ClampedReflection (N0refl, N1refl, V);
@@ -2924,11 +2641,11 @@ GetColorForRay (ray *r, object_t *object, fastbsp_t *fastbsp, randomseed_t *seed
                         col0.A = A;
                         col0.N = (N1 + V3 (1.f))*V3 (0.5);
                     }
-                        if (r->remdepth == mat->remdepth)
-                        {
-                           col0.A = V3 (0.1f);
-                        }
 
+                    if (r->remdepth == mat->remdepth)
+                    {
+                        col0.A = V3 (0.1f);
+                    }
 
                     v3 V = r->dir;
 
@@ -2941,9 +2658,6 @@ GetColorForRay (ray *r, object_t *object, fastbsp_t *fastbsp, randomseed_t *seed
 
                     // NOTE: (Kapsy) Find which side of the actual geometry the ray is on.
                     // Don't need to do this for reflection only!
-                    //float extmask = (negVdotN0 > MM_ZERO);
-                    //float intmask = MM_INV (extmask);
-
                     bool extmask = (negVdotN0 > 0.f);
 
 
@@ -2954,20 +2668,11 @@ GetColorForRay (ray *r, object_t *object, fastbsp_t *fastbsp, randomseed_t *seed
 
                     float negVdotN1refl = Dot (negV, N1refl);
 
-                    //v3 clampedrefl = ClampedReflection (N0refl, N1refl, V);
-                    //
-
-
                     // NOTE: (Kapsy) Obtain reflection vector.
                     v3 refl = Unit (V + negVdotN1refl*2.f*N1) + mat->Ns*RandomInUnitSphereFast (seed);
-                    //float reflover = (Dot (refl, N0refl) < MM_ZERO);
-                    //v3 reflres = (refl & MM_INV (reflover)) + (clampedrefl & reflover);
 
                     // NOTE: (Kapsy) Obtain Lambert scatter vector.
                     v3 lamb = N1 + RandomInUnitSphereFast (seed);
-                    //float lambover = (Dot (lamb, N0refl) < MM_ZERO);
-                    //v3 lambres = (lamb & MM_INV (lambover)) + (clampedrefl & lambover);
-
 
                     v3 rnewdir = lamb;
 
@@ -3009,7 +2714,7 @@ GetColorForRay (ray *r, object_t *object, fastbsp_t *fastbsp, randomseed_t *seed
 
                 res.I += I;
                 res.A += I;
-                res.N += V3 (0.f);//(r->dir + V3 (1.f))*V3 (0.5f);
+                res.N += V3 (0.f);
 
             } break;
 
@@ -3046,19 +2751,16 @@ _ClampReflected (v34 N, v34 phi)
     return (res);
 }
 
-// need to pull this out, and recompress
 inline colres4_t
 GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128 outmask, v3 signs, randomseed_t *seed)
 {
-    // better to keep res on stack and then copy???
-    // prob not?
+    // TODO: (Kapsy) Better to keep res on stack and then copy???
     __sync_fetch_and_add (&g_numpackets, 1);
 
     if (HaveBitsSet (outmask))
     {
         __sync_fetch_and_add (&g_numsplitpackets, 1);
     }
-
 
     // NOTE: (Kapsy) Might not be all that efficient to use these, especially the further we get down the stack.
     m128 zero = _mm_set1_ps (0.f);
@@ -3156,8 +2858,6 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
         }
         else if (primtype == PrimTypeSphere)
         {
-            //matindex = (int)hit4.primref[i];
-            //matindex = 0;
             matindex = spheres[(int)hit4.primref[i]].matindex;
         }
 
@@ -3199,9 +2899,6 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
         matset_t *matset = matsets + i;
 
         m128 matsetmask = _mm_loadu_ps ((float *) matset->mask);
-
-        // mat_t *mat = object matset->matindex
-
 
         v34 N;
         // Tangent vector.
@@ -3368,7 +3065,6 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
                     // reflection rays etc, so better to work in object space
                     // from the start.
 
-
                     // Textures.
                     tri_t *trivt = object->trivts + triindex;
 
@@ -3376,10 +3072,7 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
                     v3 uvB = object->vertuvs[trivt->B];
                     v3 uvC = object->vertuvs[trivt->C];
 
-                    // idea is that we get 3 vals that we lerp on
-                    // based on our local wuv
-                    // so it's just a weighting
-
+                    // NOTE: (Kapsy) Idea is that we get 3 vals that we lerp on based on our local wuv, so it's just a weighting.
                     float weightw = 1.f - (hitu[j] + hitv[j]);
                     float weightu = 1.f - (hitw[j] + hitv[j]);
                     float weightv = 1.f - (hitw[j] + hitu[j]);
@@ -3394,11 +3087,9 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
             u = _mm_and_ps (u, matsetmask);
             v = _mm_and_ps (v, matsetmask);
 
-            // quicker to calc at point of collision?
+            // TODO: (Kapsy) Quicker to calc at point of collision?
             N = (Unit (hitw*A4 + hitu*B4 + hitv*C4)) & matsetmask;
             p = (r4->orig + (hit4.dist)*r4->dir) & matsetmask;
-
-
             T = (Unit (hitw*TA4 + hitu*TB4 + hitv*TC4)) & matsetmask;
 
 #else
@@ -3492,10 +3183,10 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
 
             // m128 theta = asin(plocal.y);
 
-            // okay, it works fine, just that cos by itself does not give a linear position across the circle.
-            // we need to convert it into radians
-            // damn obvious when you think about what cos actually means and what is happening.
-            // so quite likely PS solution _is_ faster because it doesn't use dot products etc.
+            // NOTE: (Kapsy) Okay, it works fine, just that cos by itself does not give a linear position across the circle.
+            // We need to convert it into radians.
+            // Damn obvious when you think about what cos actually means and what is happening.
+            // So quite likely PS solution _is_ faster because it doesn't use dot products etc.
             // We really don't care that much, probably not going to be texturing spheres everywhere.
 
             m128 pi = _mm_set1_ps (M_PI);
@@ -3530,7 +3221,7 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
                         v34 N0 = N;
                         v34 N1 = GetTextureNormal (mat, p, N0, T, u, v, matsetmask);
 
-                        // do this in a way so we don't repeat everywhere.
+                        // TODO: (Kapsy) Do this in a way so we don't repeat everywhere.
                         v34 A = GetAttenuation4 (mat->tex, _mm_and_ps (u, matsetmask), _mm_and_ps (v, matsetmask), p);
                         if (r4->remdepth == mat->remdepth)
                         {
@@ -3538,9 +3229,8 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
                             col0.N = (((N1 + V34 (MM_ONE))*V34 (MM_HALF)) & matsetmask);
                         }
 
-                        // move this to options
+                        // TODO: (Kapsy) Move this to options.
                         m128 bias = _mm_set1_ps(1e-3);
-
 
                         {
                             v34 V = r4->dir;
@@ -3579,14 +3269,10 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
                             v34 reflres = (refl & MM_INV (reflover)) + (clampedrefl & reflover);
 
                             ray4 rnew = Ray4 (p + N0refl*bias, reflres);
-                        ApplyBonus (rnew, r4, mat);
+                            ApplyBonus (rnew, r4, mat);
 
-                        colres4_t col1 = GetColorForRaySplittingBySign(&rnew, object, fastbsp, depth, seed);
-                        col0.I = A*col1.I; // we only keep mixing in the color for recursive bounces, everything else is just oonc.e
-
-
-
-
+                            colres4_t col1 = GetColorForRaySplittingBySign(&rnew, object, fastbsp, depth, seed);
+                            col0.I = A*col1.I; // we only keep mixing in the color for recursive bounces, everything else is just oonc.e
 
                             r4->splitcount += rnew.splitcount;
                         }
@@ -3645,9 +3331,6 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
                         m128 negVdotN1refl = Dot (negV, N1refl);
 
                         v34 clampedrefl = ClampedReflection (N0refl, N1refl, V);
-
-                        // Can't do this because we need values for refraction.
-                        ///m128 reflprob = ReflectionProb (mat, V, N1refl, VdotN1, intmask, extmask);
 
                         // NOTE: (Kapsy) Obtain refraction color.
                         m128 refrindex = _mm_set1_ps(mat->refindex);
@@ -3761,7 +3444,6 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
                         colres4_t col1 = GetColorForRaySplittingBySign(&rrefl, object, fastbsp, depth, seed);
                         col0.I = A*col1.I;
 
-
                         r4->splitcount += rrefl.splitcount;
                     }
 
@@ -3785,7 +3467,6 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
                         // move this to options
                         m128 bias = _mm_set1_ps(1e-3);
 
-                        //v34 A = GetAttenuation4 (mat->tex, _mm_and_ps (u, matsetmask), _mm_and_ps (v, matsetmask), p);
                         v34 A = V34 (_mm_set1_ps (0.6)) + ((r4->dir + V34 (MM_ONE))*V34 (MM_HALF))*V34 (_mm_set1_ps (0.4));
 
                         if (r4->remdepth == mat->remdepth)
@@ -3828,7 +3509,6 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
                         colres4_t col1 = GetColorForRaySplittingBySign(&rrefl, object, fastbsp, depth, seed);
                         col0.I = A*col1.I;
 
-
                         r4->splitcount += rrefl.splitcount;
                     }
 
@@ -3862,7 +3542,6 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
 
             case MAT_LAMBERTIAN_REFLECTION_MAP:
                 {
-
                     m128 ks = _mm_set1_ps (0.3);
 
                     // should get earlier!
@@ -3918,37 +3597,7 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
 
                         v34 clampedrefl = ClampedReflection (N0refl, N1refl, V);
 
-                        ///// // NOTE: (Kapsy) Obtain refraction color.
-                        ///// m128 refrindex = _mm_set1_ps(mat->refindex);
-                        ///// m128 lenVdotN1 = VdotN1/Length (r4->dir);
-
-                        ///// m128 cos =
-                        /////     _mm_and_ps(refrindex*lenVdotN1, intmask) +
-                        /////     _mm_and_ps(MM_NEGONE*lenVdotN1, extmask);
-
-                        ///// m128 niovernt =
-                        /////     _mm_and_ps(refrindex, intmask) +
-                        /////     _mm_and_ps(MM_ONE/refrindex, extmask);
-
-                        ///// v34 unitV = Unit (V);
-                        ///// m128 dt = Dot (unitV, N1refl);
-                        ///// //m128 dtmask = (dt > MM_ZERO);
-                        ///// m128 discriminant = MM_ONE - niovernt*niovernt*(MM_ONE - dt*dt);
-                        ///// m128 discmask = (discriminant > MM_ZERO);
-
-
-                        ///// // NOTE: (Kapsy) Obtain reflection probability.
-                        ///// m128 reflfactor = _mm_set1_ps(mat->reflfactor);
-                        ///// m128 reflprob =
-                        /////     Clamp014( (_mm_and_ps (Schlick4 (cos, refrindex), discmask) +
-                        /////                 _mm_and_ps (MM_ONE, MM_INV (discmask)))
-                        /////             *reflfactor);
-                        // Could we turn this into a function?
-                        // Yep, but we get a 5% slowdown
-                        // Hmmm, maybe not.
-                        // Will leave for now, but this could be tidier.
                         m128 reflprob = ReflectionProb (mat, V, N1refl, VdotN1, intmask, extmask);
-
 
                         // NOTE: (Kapsy) Obtain reflection vector.
                         v34 refl = Unit ((V + negVdotN1refl*MM_TWO*N1) + _mm_set1_ps (mat->fuzz)*RandomInUnitSphere4Fast (seed));
@@ -3985,9 +3634,9 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
 
             case MAT_DUMB_BRDF:
                 {
-                    // the ratio of reflection of the specular term of incoming light.
+                    // NOTE: (Kapsy) The ratio of reflection of the specular term of incoming light.
                     m128 ks = _mm_set1_ps (mat->Ks.r);
-                    // the "shininess" of the specularity.
+                    // NOTE: (Kapsy) The "shininess" of the specularity.
                     m128 ns = _mm_set1_ps (mat->Ns);
 
                     colres4_t col0 = {};
@@ -4000,16 +3649,17 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
                         v34 N1 = GetTextureNormal (mat, p, N0, T, u, v, matsetmask);
 
                         v34 A = GetAttenuation4 (mat->tex, _mm_and_ps (u, matsetmask), _mm_and_ps (v, matsetmask), p);
-                        // do this in a way so we don't repeat everywhere.
-                        // NEED TO MAKE SURE THAT THIS IS FOR THE FIRST HIT ONLY
-                        // yep, only set albedo and a there, otherwise nothing at all
+
+                        // TODO: (Kapsy) Do this in a way so we don't repeat everywhere.
+                        // NEED TO MAKE SURE THAT THIS IS FOR THE FIRST HIT ONLY.
+                        // Yep, only set albedo and a there, otherwise nothing at all.
                         if (r4->remdepth == mat->remdepth)
                         {
                             col0.A = A;
                             col0.N = (((N1 + V34 (MM_ONE))*V34 (MM_HALF)) & matsetmask);
                         }
 
-                            col0.A = A;
+                        col0.A = A;
 
                         m128 bias = _mm_set1_ps(1e-3);
 
@@ -4021,7 +3671,6 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
                         v34 negV = V*MM_NEGONE;
 
                         m128 negVdotN0 = Dot (negV, N0);
-                        //m128 negVdotN1 = Dot (negV, N1);
 
                         // NOTE: (Kapsy) Find which side of the actual geometry the ray is on.
                         // Don't need to do this for reflection only!
@@ -4030,15 +3679,13 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
 
                         // rename to out???
                         // NOTE: (Kapsy) Normal for reflected geometry rays.
-                        v34 N0refl = N0;//(N0 & extmask) + (N0*MM_NEGONE & intmask);
+                        v34 N0refl = N0;
                         // NOTE: (Kapsy) Normal for reflected normal map rays.
-                        v34 N1refl = N1;//(N1 & extmask) + (N1*MM_NEGONE & intmask);
-
+                        v34 N1refl = N1;
 
                         m128 negVdotN1refl = Dot (negV, N1refl);
 
                         v34 clampedrefl = ClampedReflection (N0refl, N1refl, V);
-
 
                         // NOTE: (Kapsy) Obtain reflection vector.
                         v34 refl = Unit (V + negVdotN1refl*MM_TWO*N1 + ns*RandomInUnitSphere4Fast (seed));
@@ -4049,7 +3696,6 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
                         v34 lamb = N1 + RandomInUnitSphere4Fast (seed);
                         m128 lambover = (Dot (lamb, N0refl) < MM_ZERO);
                         v34 lambres = (lamb & MM_INV (lambover)) + (clampedrefl & lambover);
-
 
                         m128 reflprob = ks;
                         m128 reflmask = RandomUnilateral4 (seed) <= reflprob;
@@ -4083,14 +3729,11 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
                     {
                         v34 N0 = N;
                         v34 N1 = N;
-                        //v34 N1 = GetTextureNormal (mat, p, N0, T, u, v, matsetmask);
-                        //
-                        //
-                        //
                         v34 A = GetAttenuation4 (mat->tex, _mm_and_ps (u, matsetmask), _mm_and_ps (v, matsetmask), p);
-                        // do this in a way so we don't repeat everywhere.
-                        // NEED TO MAKE SURE THAT THIS IS FOR THE FIRST HIT ONLY
-                        // yep, only set albedo and a there, otherwise nothing at all
+
+                        // TODO: (Kapsy) Do this in a way so we don't repeat everywhere.
+                        // NEED TO MAKE SURE THAT THIS IS FOR THE FIRST HIT ONLY.
+                        // Yep, only set albedo and a there, otherwise nothing at all.
                         if (r4->remdepth == mat->remdepth)
                         {
                             col0.A = A;
@@ -4129,17 +3772,12 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
                         // NOTE: (Kapsy) Obtain reflection vector.
                         m128 ns = _mm_set1_ps (mat->Ns);
                         v34 refl = Unit (V + negVdotN1refl*MM_TWO*N1) + ns*RandomInUnitSphere4Fast(seed);
-                        //m128 reflover = (Dot (refl, N0refl) < MM_ZERO);
-                        //v34 reflres = (refl & MM_INV (reflover)) + (clampedrefl & reflover);
                         v34 reflres = refl;
 
                         // NOTE: (Kapsy) Obtain Lambert scatter vector.
                         v34 lamb = N1 + RandomInUnitSphere4Fast (seed);
-                        //m128 lambover = (Dot (lamb, N0refl) < MM_ZERO);
-                        //v34 lambres = (lamb & MM_INV (lambover)) + (clampedrefl & lambover);
                         v34 lambres = lamb;
 
-                        //reflprob = reflprob*ks;
                         m128 reflmask = RandomUnilateral4 (seed) <= reflprob;
 
                         // shouldn't A1 be what we use for denoise?
@@ -4150,8 +3788,8 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
                         ray4 rnew = Ray4 (p + N0refl*bias, rnewdir);
                         ApplyBonus (rnew, r4, mat);
 
-                        // needs to fill out I and A
-                        // damnit, can we just make these functions return a colres? much easier.
+                        // Needs to fill out I and A.
+                        // Can we just make these functions return a colres? much easier.
                         // Okay either way is fine as long as we define the rules:
                         // - Each color result function takes a pointer
                         // - Internally, it creates a stack res
@@ -4160,13 +3798,12 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
                         // The problem here is we have multiple colors per material.
                         //
                         // Still like the return way better. Stack based return just suits recursive processing better.
-                        // hmmmm thinking
-                        // Okay fine I have this allllll wrong.
+                        // Okay fine I have this all wrong.
                         // albedo is FIRST HIT ONLY
                         // same with NORMAL
-                        // so we don't keep mixing it.
+                        // So we don't keep mixing it.
                         colres4_t col1 = GetColorForRaySplittingBySign(&rnew, object, fastbsp, depth, seed);
-                        col0.I = A*col1.I; // we only keep mixing in the color for recursive bounces, everything else is just oonc.e
+                        col0.I = A*col1.I; // We only keep mixing in the color for recursive bounces, everything else is just once.
 
                         r4->splitcount += rnew.splitcount;
                     }
@@ -4187,13 +3824,7 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
                     // NOTE: (Kapsy) Not filling out N for sky.
                     col0.I = GetBackgroundColor (r4, mat);
                     col0.A = col0.I;
-                    col0.N = V34 (MM_ZERO);//(r4->dir + V34 (MM_ONE))*V34 (MM_HALF);
-
-                    //// if (r4->remdepth == mat->remdepth)
-                    //// {
-                    ////     col0.A = col0.I;
-                    //// }
-
+                    col0.N = V34 (MM_ZERO);
 
                     res.I += (col0.I & matsetmask);
                     res.A += (col0.A & matsetmask);
@@ -4203,7 +3834,6 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
 
             case MAT_NORMALS:
                 {
-
                     //// v34 I = V34 (V3(0,0,0));
 
                     //// m128 matsetmask = _mm_loadu_ps ((float *) matset->mask);
@@ -4227,8 +3857,8 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
     }
 
 
-    // outmask should no longer apply if only tracing full packets.
-    // the one reason I can think why our packet traces are much slower is simply because there are many paths were we break down to scalar...
+    // NOTE: (Kapsy) Outmask should no longer apply if only tracing full packets.
+    // The one reason I can think why our packet traces are much slower is simply because there are many paths were we break down to scalar...
     //// col4[COLOR_INDEX] = col4[COLOR_INDEX] & outmaskinv;
     //// col4[ALBEDO_INDEX] = col4[ALBEDO_INDEX] & outmaskinv;
     //// col4[NORMAL_INDEX] = col4[NORMAL_INDEX] & outmaskinv;
@@ -4243,11 +3873,6 @@ GetColorForRay4 (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, m128
 
     return (res);
 }
-
-
-
-
-
 
 static colres4_t
 GetColorForRaySplittingBySign (ray4 *r4, object_t *object, fastbsp_t *fastbsp, int depth, randomseed_t *seed)
@@ -4314,16 +3939,6 @@ GetColorForRaySplittingBySign (ray4 *r4, object_t *object, fastbsp_t *fastbsp, i
     }
 
 #endif
-
-    // wondering if our splitting code is slowing us down...
-
-
-
-
-    // split based on sign
-    //ray4 r4 = scattered;
-
-
 
 #if 0
     // Really need a way of pulling this logic out to deal with color and shadows with the same code.
@@ -4743,7 +4358,6 @@ struct jobqueueentry_t
     void *data;
 };
 
-//#define MAX_JOB_QUEUE_ENTRIES (1 << 11)
 #define MAX_JOB_QUEUE_ENTRIES (1 << 14)
 struct jobqueue_t
 {
@@ -4754,7 +4368,6 @@ struct jobqueue_t
     unsigned int writepos;
     jobqueueentry_t entries[MAX_JOB_QUEUE_ENTRIES];
 };
-
 
 static jobqueue_t g_jobqueue;
 
@@ -4796,12 +4409,12 @@ struct renderchunkdata_t
     // could make ints to save more room and multiply in render threads.
     float stratposx;
     float stratposy; // 60
-int rppstart;
+    int rppstart;
 
-randomseed_t randomseed;
+    randomseed_t randomseed;
 
     // NOTE: (Kapsy) Interestingly, getting this wrong causes a 2-3 % slowdown.
-    //char pad[4];
+    // char pad[4];
 };
 
 
@@ -4818,12 +4431,11 @@ ThreadProc (void *arg)
         unsigned int readpos = queue->readpos;
         if (readpos != queue->writepos)
         {
-            // buffer here doesn't really need to be a circular buffer at this stage.
-            //
+            // NOTE: (Kapsy) Doesn't really need to be a circular buffer at this stage.
             unsigned int newreadpos = (readpos + 1) & (MAX_JOB_QUEUE_ENTRIES - 1);
             if (__sync_bool_compare_and_swap (&queue->readpos, readpos, newreadpos))
             {
-                // job entries should also be spaced a cacheline apart.
+                // TODO: (Kapsy) Job entries should also be spaced a cacheline apart.
                 jobqueueentry_t *entry = queue->entries + readpos;
 
                 switch (entry->type)
@@ -4864,17 +4476,15 @@ CompleteAllJobs (void)
     unsigned int completioncount = __sync_fetch_and_add (&queue->completioncount, 0);
     while (completioncount != queue->completiongoal)
     {
-
-        // move to inline function.
+        // Move to inline function.
         unsigned int readpos = queue->readpos;
         if (readpos != queue->writepos)
         {
-            // buffer here doesn't really need to be a circular buffer at this stage.
-            //
+            // NOTE: (Kapsy) Doesn't really need to be a circular buffer at this stage.
             unsigned int newreadpos = (readpos + 1) & (MAX_JOB_QUEUE_ENTRIES - 1);
             if (__sync_bool_compare_and_swap (&queue->readpos, readpos, newreadpos))
             {
-                // job entries should also be spaced a cacheline apart.
+                // TODO: (Kapsy) Job entries should also be spaced a cacheline apart.
                 jobqueueentry_t *entry = queue->entries + readpos;
 
                 switch (entry->type)
@@ -4908,21 +4518,20 @@ static renderchunkdata_t *g_renderchunks;
 #define ELEMENTS_PER_PIXEL 3
 
 #define SIMD_PACKET_1X4 0
-// seems a bit faster.
+// NOTE: (Kapsy) Seems a bit faster. Need to profile.
 #define SIMD_PACKET_2X2 1
 
 static void
 RenderChunk (renderchunkdata_t *chunk)
 {
-
     int rppstart = chunk->rppstart;
 
     randomseed_t *seed = &chunk->randomseed;
 
     // NOTE: (Kapsy) For debugging individual packets only.
     // NOTE: (Kapsy) testx MUST BE EVEN, testy MUST BE ODD.
-    //int testx = 112;
-    //int testy = 73;
+    // int testx = 112;
+    // int testy = 73;
 
     int testx = 314;
     int testy = 581;
@@ -4944,14 +4553,12 @@ RenderChunk (renderchunkdata_t *chunk)
     int starty = chunk->starty;
     int endy = chunk->starty + chunk->dimy; // should always be a multiple of simd h
 
-
     // NOTE: (Kapsy) Even though we say aa, this is actually more MC.
     // rename to rpp
     int aawcount = 1;
     int aahcount = 1;
     int aacount = aawcount*aahcount;
     float aacountinv = 1.f/(float)aacount;
-
 
 #if SIMD_PACKET_2X2
 
@@ -4961,11 +4568,9 @@ RenderChunk (renderchunkdata_t *chunk)
     unsigned int w = chunk->buffers[COLOR_INDEX].w;
     unsigned int h = chunk->buffers[COLOR_INDEX].h;
 
-
     float stratposx = chunk->stratposx;
     float stratposy = chunk->stratposy;
-
-    //float lensstratangle = chunk->lensstratangle;
+    // float lensstratangle = chunk->lensstratangle;
 
     // NOTE: (Kapsy) 2X2 packet process.
     for (int j=(endy - 1) ; j >= starty ; j-=packeth)
@@ -4993,62 +4598,47 @@ RenderChunk (renderchunkdata_t *chunk)
             // What we have now is more suitable for real time, however for
             // real time we should be approaching anit aliasing in a different
             // way anyway.
-            //for (int a=0 ; a<aacount ; a++)
-
-
-            //float awd = 1.f/(float)aawcount;
-            //float ahd = 1.f/(float)aahcount;
+            // for (int a=0 ; a<aacount ; a++)
+            // float awd = 1.f/(float)aawcount;
+            // float ahd = 1.f/(float)aahcount;
 
             for (int aw=0 ; aw<aawcount ; aw++)
             {
                 for (int ah=0 ; ah<aahcount ; ah++)
                 {
                     __sync_fetch_and_add (&numprimaryrays, 4);
+
                     // NOTE: (Kapsy) Have to define rays in packet from bottom to top.
-                    // can prob simd this.
-                    //
+                    // Can probably SIMD this.
                     for (int y=(packeth - 1) ; y >= 0 ; y--)
                     {
                         for (int x=0 ; x<packetw ; x++)
                         {
-
-
                             // NOTE: (Kapsy) Stratified samples.
                             // This definitely improves the "togetherness" of aa.
-                            //float randx = ((float)aw)*awd + drand48()*awd;
-                            //float randy = ((float)ah)*ahd + drand48()*ahd;
+                            // float randx = ((float)aw)*awd + drand48()*awd;
+                            // float randy = ((float)ah)*ahd + drand48()*ahd;
 
+                            // float randx = (float)stratposx + drand48()*g_stratdimx;
+                            // float randy = (float)stratposy + drand48()*g_stratdimy;
 
-                            //float randx = (float)stratposx + drand48()*g_stratdimx;
-                            //float randy = (float)stratposy + drand48()*g_stratdimy;
-
-                            // going back to rand while we sort out motion blur.
                             float randx = drand48();
                             float randy = drand48();
 
-                            // turns out rand is actually really shit for aa sampling.
                             float u = ((float)(i + x) + randx)/(float)nx;
+                            float v = ((float)(j - y) + randy)/(float)ny; // TODO: (Kapsy) Should this be minus rand?
 
-                            float v = ((float)(j - y) + randy)/(float)ny; //should this be minus rand?
-
-                            //float u = (float)(i + x)/(float)nx;
-                            //float v = (float)(j - y)/(float)ny;
-                            //
+                            // float u = (float)(i + x)/(float)nx;
+                            // float v = (float)(j - y)/(float)ny;
 
                             int sy = h - (j - y + 1);
                             int sx = i;
                             int a = sy*nx*g_rppcount + sx*g_rppcount + rppstart;
                             float lensstratangle = g_stratangles[a];
 
-                    ///int stratindex = (rppstart + stratstartindex*3)%g_stratanglecount;
-                    ///float lensstratangle = g_stratangles[stratindex];
-                    //float lensstratangle = g_stratangles[rppstart];
-
-
                             int k = y*packetw + x;
 
                             ray r1 = GetRay (cam, u, v, lensstratangle);
-
 
                             // NOTE: (Kapsy) All single rays test.
                             //// r1.remdepth = MAX_DEPTH;
@@ -5058,7 +4648,6 @@ RenderChunk (renderchunkdata_t *chunk)
                             //// col4.x[k] += rescol.x;
                             //// col4.y[k] += rescol.y;
                             //// col4.z[k] += rescol.z;
-
 #if 1
                             r4.orig.x[k] = r1.orig.x;
                             r4.orig.y[k] = r1.orig.y;
@@ -5298,11 +4887,10 @@ RenderChunk (renderchunkdata_t *chunk)
                     }
 #endif
 
-                    // poost stuff here
+                    // NOTE: (Kapsy) Post stuff here.
                     col0.I += col1.I;
                     col0.A += col1.A;
                     col0.N += col1.N;
-
                 }
             }
 
@@ -5483,8 +5071,6 @@ ToneMap (renderchunkdata_t *chunk)
                     col.y = Clamp01 (outat[1]);
                     col.z = Clamp01 (outat[2]);
 
-                    //float shape = 1.08f;
-                    //float shape = 1.12f;
                     float shape = 1.2f;
                     col.x = sqrt (powf (col.x, shape));
                     col.y = sqrt (powf (col.y, shape));
@@ -5501,6 +5087,7 @@ ToneMap (renderchunkdata_t *chunk)
 
 
 #define MAX_VNTS (1 << 12)
+
 // NOTE: (Kapsy) A temp list for storing all tangents per vertex normal.
 struct vntlist_t
 {
@@ -5508,9 +5095,8 @@ struct vntlist_t
     v3 tangents[MAX_VNTS];
 };
 
-
-// need to put all this into a scene
-// just passsing all this junk for now, but will eventually merge it into some kind of camera settings struct
+// TODO: (Kapsy) Need to put all this into a scene struct.
+// TODO: (Kapsy) Just passsing all this junk for now, but will eventually merge it into some kind of camera settings struct.
 static void
 SimulateScene (float tdelta, camera &cam, object_t *object, fastbsp_t *fastbsp, int nx, int ny,
         v3 &lookfrom, v3 &lookat,
@@ -5528,26 +5114,23 @@ SimulateScene (float tdelta, camera &cam, object_t *object, fastbsp_t *fastbsp, 
     cam.horiz = 2.f*halfwidth*focusdist*cam.u;
     cam.vert = 2.f*halfheight*focusdist*cam.v;
 
-    // need to make this function take the u, v, so we can setup  the camera after.
+    // TODO: (Kapsy) Need to make this function take the u, v, so we can setup the camera after.
     targetfocusdist = GetAutofocusDistance (&cam, object, fastbsp, nx, ny);
 
-    // cant set an update rate here?
-    // yes we can, just has be be t based, instead of frame or ticks
-    // don't want this to be constant
-    // although, might actually suit being constant
-    // so that big focus changes would take longer to kick in
-    // so need it to be so that if no more changes to target,
-    // trying fixed for now
+    // NOTE: (Kapsy) Can't set an update rate here?
+    // Yes we can, just has be be t based, instead of frame or ticks.
+    // Don't want this to be constant.
+    // Although, might actually suit being constant.
+    // So that big focus changes would take longer to kick in.
+    // So need it to be so that if no more changes to target. Trying fixed for now.
 
     float focusdistdiff = targetfocusdist - focusdist;
 
     // NOTE: (Kapsy) In seconds.
-    // float focussmoothingtime = 1.0f;
     float focussmoothingtime = 0.24;
     float focusupdaterate = focusdistdiff/focussmoothingtime;//(in units/s)
 
-    // ideally would get the delta from this t and last t, so we can jump to allow for shutter speed
-
+    // TODO: (Kapsy) Ideally would get the delta from this t and last t, so we can jump to allow for shutter speed.
     float focusdistdelta = tdelta*focusupdaterate;
     focusdist += focusdistdelta;
 
@@ -5565,19 +5148,18 @@ SimulateScene (float tdelta, camera &cam, object_t *object, fastbsp_t *fastbsp, 
     cam.horiz = 2.f*halfwidth*focusdist*cam.u;
     cam.vert = 2.f*halfheight*focusdist*cam.v;
 
+#if 1
+    // Rodrigues Rotation formula
+    v3 v = lookfrom;
+    v3 k = V3 (0,1,0);
+    float omega = rotspeed*tdelta;
+    v = v*cos(omega) + Cross (k, v)*sin(omega) + k*Dot (k, v)*(1.f - cos(omega));
+    lookfrom = v;
+#endif
 
-    #if 1
-                // Rodrigues Rotation formula
-                v3 v = lookfrom;
-                v3 k = V3 (0,1,0);
-                float omega = rotspeed*tdelta;
-                v = v*cos(omega) + Cross (k, v)*sin(omega) + k*Dot (k, v)*(1.f - cos(omega));
-                lookfrom = v;
-    #endif
 }
 
 static unsigned int g_seedfactor = 1;
-
 
 int main(int argc, char **argv)
 {
@@ -5602,59 +5184,44 @@ int main(int argc, char **argv)
     l3->intensity = 18.0f;
 
     // NOTE: (Kapsy) Setup a simple memory pool.
-    //uint32_t size = (1 << 30);
-    // okay not a size thing, think that it's more we're running off the end of our allocations somewhere,
     uint64_t g_bspmempoolsize = Megabytes ((1024 + 512));
     g_bspmempool.base = (char *) malloc (g_bspmempoolsize);
     g_bspmempool.at = g_bspmempool.base;
     g_bspmempool.remaining = g_bspmempoolsize;
 
-    // NOTE: (Kapsy) Load the teapot stl and create internal object
-
-
 #if 1
-
-    // 300SL obj - lowered
-    //// m44 S = M44Scale (0.0f);
-    //// m44 T = M44Trans (0.f, 0.0f, 0.0f);
-    //// m44 Rx = M44RotX (Rad (0.f));
-    //// m44 Ry = M44RotY (Rad (0.f));
-    //// m44 R = Ry*Rx;
-    //// m44 w1 = T*R;
-    //// m44 w3 = w1*S;
-
-    //m44 T = M44Trans (0.f, 0.f, 0.f);
-    //object_t *object = LoadOBJObject ("data/stanford_bunny_01.obj", T);
+    // m44 T = M44Trans (0.f, 0.f, 0.f);
+    // object_t *object = LoadOBJObject ("data/stanford_bunny_01.obj", T);
 
     m44 T = M44Trans (0.f, 0.0f, -0.3f);
     object_t *object = LoadOBJObject ("data/merc_300sl_45_internal_paint_reflections_fix.obj", T);
 
+    // m44 T = M44Trans (0.f, 0.f, 0.f);
+    // object_t *object = LoadOBJObject ("data/test_cube_02.obj", T);
 
-    //m44 T = M44Trans (0.f, 0.f, 0.f);
-    //object_t *object = LoadOBJObject ("data/test_cube_02.obj", T);
+    // m44 T = M44Trans (0.f, 0.f, 0.f);
+    // object_t *object = LoadOBJObject ("data/low_poly_test_001.obj", T);
 
-    //m44 T = M44Trans (0.f, 0.f, 0.f);
-    //object_t *object = LoadOBJObject ("data/low_poly_test_001.obj", T);
+    // NOTE: (Kapsy) Manually creating tangents for each vertex:
+    // Iterate all triangles:
+    // Create T
+    // For each vertex used by the triangle, we create a T vector, mapped to verts size for now.
+    // We also create a list for that t, and add the triangles T to that list.
+    // Go through each t, average out the ts from the tri t list.
 
-    // NOTE: (Kapsy) Manually creating tangents for each vertex.
+    // For now, don't need special tri_t for the t indexes themselves, they just map to tri/vert indexes. Wasteful, but just to get it going should be fine.
 
-    // iterate all triangles:
-    // create T
-    // for each vertex used by the triangle, we create a T vector, mapped to verts size for now.
-    // we also create a list for that t, and add the triangles T to that list
-    // go through each t, average out the ts from the tri t list.
-
-    // for now, don't need special tri_t for the t indexes themselves, they just map to tri/vert indexes. Wasteful, but just to get it going should be fine.
-
-    // okay, something major we failed to take into account was that we are
+    // Okay, something major we failed to take into account was that we are
     // averaging ALL tangents when we only want to be averaging those with
     // shared vertex normals.
     //
-    // So what we should do is build our temp list of tangents per vertex normal, instead of per vertex.
-    // And we would retrive them in the same way, so that there may be shared tangents.
+    // So what we should do is build our temp list of tangents per vertex
+    // normal, instead of per vertex.
+    //
+    // And we would retrive them in the same way, so that there may be shared
+    // tangents.
 
-
-    // move this out to the obj loader.
+    // TODO: (Kapsy) Move this out to the obj loader.
     vntlist_t *vntlists = (vntlist_t *) calloc (1, sizeof (vntlist_t)*object->vertnormcount);
 
     for (int i=0 ; i<object->tricount ; i++)
@@ -5740,7 +5307,7 @@ int main(int argc, char **argv)
     v3 lookfrom = V3 (0.0,0.0,7.3);
     v3 lookat = V3 (0.f,1.2f,0.0);
 
-    // temp settings only.
+    // NOTE: (Kapsy) Temp settings only.
 #if 0
     for (int i=0 ; i<object->matcount ; i++)
     {
@@ -5751,8 +5318,6 @@ int main(int argc, char **argv)
 
         //// mat->type = MAT_METAL;
         //// mat->fuzz = 0.0f;
-
-
 
         //// switch (i)
         //// {
@@ -5819,25 +5384,10 @@ int main(int argc, char **argv)
 
             case MercMatBody:
                 {
-                    // original
+                    // NOTE: (Kapsy) Original black paint.
 #if 0
-                    //mat->tex->albedo = V3(0.45, 0.45, 0.48);
-                    //mat->tex->albedo = V3(1.0, 0.0, 0.0);
-                    ////  mat->type = MAT_DUMB_BRDF;
-
-                    ////  mat->Kd = V3 (0.7f);
-                    ////  mat->Ks = V3 (0.3f);
-                    ////  mat->Ns = 0.05f;
-                    //
-                //mat->tex->albedo = V3(1.0);
-                    //mat->tex->albedo = V3(0.35, 0.35, 0.48);
-                   mat->tex->albedo = V3(116.f/255.f, 119.f/255.f, 102.f/255.f)*0.0;
-                   //mat->tex->albedo = V3(255.f/255.f, 119.f/255.f, 102.f/255.f);
-
+                    mat->tex->albedo = V3(116.f/255.f, 119.f/255.f, 102.f/255.f)*0.0;
                     mat->type = MAT_CAR_PAINT;
-
-                    //mat->Kd = V3 (0.2f);
-                    //mat->Ks = V3 (0.8f);
 
                     mat->ksbase = 0.33f;
                     mat->ksmax = 1.f;
@@ -5849,18 +5399,17 @@ int main(int argc, char **argv)
                     mat->reflfactor = 3.f;
 #endif
 
-
-                    // hot wheels
+                    // NOTE: (Kapsy) Hot wheels.
 #if 0
                     mat->tex->albedo = V3(1.f);
                     mat->type = MAT_METAL_DIR_COLOR;
-                    //mat->fuzz = 0.05f;
                     mat->fuzz = 0.010f;
+
                     // TODO: (Kapsy) Should split out for wheels and maybe bumpers onl?
                     mat->depthbonus = 4*BONUS_MOD;
 #endif
 
-                    // best so far
+                    // NOTE: (Kapsy) Red paint.
 #if 1
                     mat->tex->albedo = V3(255.f/255.f, 0.f/255.f, 0.f/255.f);
                     mat->type = MAT_CAR_PAINT;
@@ -5869,11 +5418,8 @@ int main(int argc, char **argv)
                     mat->refindex = 3.4f;
 
                     mat->depthbonus = 2*BONUS_MOD;
-                    //mat->reflfactor = 3.f;
-                    //mat->reflfactor = 2.45f;
                     mat->reflfactor = 1.0f;
 #endif
-
                 } break;
 
             case MercMatChrome:
@@ -5886,27 +5432,7 @@ int main(int argc, char **argv)
                     mat->depthbonus = 4*BONUS_MOD;
 #endif
 
-
-
-#if 0
-                    mat->tex->albedo = V3(255.f/255.f, 0.f/255.f, 0.f/255.f);
-                    mat->type = MAT_CAR_PAINT;
-
-                    //mat->Kd = V3 (0.2f);
-                    //mat->Ks = V3 (0.8f);
-
-                    mat->ksbase = 0.33f;
-                    mat->ksmax = 1.f;
-
-                    mat->Ns = 0.010f;
-                    mat->refindex = 1.3f;
-
-                    mat->depthbonus = 2*BONUS_MOD;
-                    mat->reflfactor = 3.f;
-#endif
-
                 } break;
-
 
             case MercMatDarkChrome:
                 {
@@ -5918,38 +5444,17 @@ int main(int argc, char **argv)
 
             case MercMatGlass:
                 {
-#if 0
-                    //mat->tex->albedo = V3(0.96f);
-                    //mat->tex->type = TEX_PLAIN;
-                    mat->type = MAT_DIELECTRIC;
-                    mat->refindex = 1.7f;
-                    //mat->reflfactor = 3.f;
-                    mat->reflfactor = 1.8f;
-                    //mat->albedoblend = 0.f;
-                    mat->depthbonus = 2;
-#endif
-
                     mat->type = MAT_DIELECTRIC;
                     mat->refindex = 2.7f;
                     mat->reflfactor = 1.1f;
                     mat->depthbonus = 2;
                 } break;
 
-            //// case MercMatHeadlampBulb:
-            ////     {
-            ////         mat->tex->type = TEX_PLAIN;
-            ////         mat->type = MAT_SOLID;
-            ////         mat->tex->albedo = V3(0.19f);
-
-            ////     } break;
-
             case MercMatHeadlampLensFlat:
                 {
                     mat->type = MAT_DIELECTRIC;
                     mat->refindex = 1.3f;
                     mat->reflfactor = 2.4f;
-                    //mat->depthbonus = 6;
-                    //mat->depthbonus = 4;
                     mat->depthbonus = 6*BONUS_MOD;
 
                 } break;
@@ -6010,11 +5515,9 @@ int main(int argc, char **argv)
                 {
                     mat->type = MAT_DUMB_BRDF;
                     mat->tex->albedo = mat->tex->albedo*0.8f;
-                    //mat->tex->albedo = V3 (0,1,0);
                     mat->Kd = V3 (0.8f);
                     mat->Ks = V3 (0.2f);
                     mat->Ns = 0.3f;
-                    //mat->texnorm = 0;
 
                 } break;
 
@@ -6044,13 +5547,12 @@ int main(int argc, char **argv)
 
         }
 
-        // a bit dumb, should add the bonus, but we only apply the bonus _after_ the first hit.
+        // TODO: (Kapsy) A bit dumb, should add the bonus, but we only apply the bonus _after_ the first hit.
         mat->remdepth = MAX_DEPTH;
     }
 #endif
 
     // TODO: (Kapsy) Can't think of a better way to do this yet, but will eventually move all materials to the scene rather than the object.
-
     InitPerlin(&testperlin2, 0.00003f);
     texture *cloudtexture = &textures[texturecount++];
     cloudtexture->type = TEX_PERLIN2;
@@ -6064,7 +5566,6 @@ int main(int argc, char **argv)
     mat_t *bgmat = object->mats + object->bgmatindex;
     bgmat->type = MAT_BACKGROUND;
     bgmat->tex = cloudtexture;
-
 
 #elif 0
 
@@ -6111,238 +5612,178 @@ int main(int argc, char **argv)
     if (!LoadFastBSP (g_fastbsp))
     {
 
+          //////////////////////////////////////////////////////////////////////
+         //// Setup Make BSP Tree /////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////
+
+        printf ("Setup Make BSP Tree\n");
+        fflush (0);
+
+        numtris = object->tricount;
+
+        // NOTE: (Kapsy) Use system alloc for temp nodes here.
+        g_makenodes = (makenode_t *) malloc( sizeof (makenode_t)*MAX_BSP_NODES);
+        makenode_t *makenode = g_makenodes + g_makenodecount++;
+
+        makenode->type = NodeTypeInner;
+        makenode->split = 0.f;
+        makenode->leftchild = 0;
+        makenode->rightchild = 0;
+        makenode->V = object->aabb;
+
+        makenode->trilist.count = object->tricount;
+        makenode->trilist.indexes =  (int *)malloc(sizeof(int)*makenode->trilist.count);
+
+        for (int i=0 ; i<object->tricount ; i++ )
+        {
+            makenode->trilist.indexes[i] = i;
+        }
+
+        printf ("Checking MakeBSPNode input...\n");
+
+        printf ("t:%d s:%f\n", makenode->type, makenode->split);
+
+        printf ("V min:%.03f %.03f %.03f max:%.03f %.03f %.03f\n",
+                makenode->V.min.x,
+                makenode->V.min.y,
+                makenode->V.min.z,
+                makenode->V.max.x,
+                makenode->V.max.y,
+                makenode->V.max.z);
+
+        printf ("makenode->trilist.count:%d\n", makenode->trilist.count);
+
+        MakeBSPNode(object, makenode, 0);
+
+        printf ("Leaf creation stats:\n  Hit min tri count: %d\n  Hit max BSP depth: %d\n  Best cost found: %d\n", g_mintricount, g_maxbspdepth, g_costbestfound);
+        fflush (0);
+
+
+          //////////////////////////////////////////////////////////////////////
+         //// Make BSP Tree Stats /////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////
+
+        g_makenodepairs = (makenodepair_t *)malloc(sizeof(makenodepair_t)*MAX_BSP_DEPTH);
+        g_makenodepaircount = 0;
+
+        CollateSlowBSPDebugInfo (makenode);
+
+        // MakeManualSplitTest(mesh->tris, mesh->tricount, makenode, 0);
+
+          //////////////////////////////////////////////////////////////////////
+         //// Setup Fast BSP Tree /////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////
+
+        printf ("Setup Fast BSP Tree\n");
+        fflush (0);
+
+        // Stack used only for creation?
+        g_makenodepaircount = 0;
+
+        // Need sizes for all allocations? Not really, as long as we have the count we should know how much to read from the file.
+        g_fastbsp = (fastbsp_t *) PoolAlloc (&g_bspmempool, sizeof (*g_fastbsp), CACHELINE_SIZE);
+
+        // NOTE: (Kapsy) In order to align node pairs to cacheline boundaries,
+        // the root node must start at + 1.
+        // Ensure tri accs are pool alloc'd after the fast nodes (for offsets).
+
+        // To serialize this would need all these globals in a file.
+        // Could put them in a struct with some sizes, wouldn't be hard to resurrect from that.
+        // Then here, we just check the existence of a file, and create if not, otherwise read in.
+        // Need to make sure we alloc mem aligned when loading.
+        bsp_node *nodes = (bsp_node *) PoolAlloc (&g_bspmempool, sizeof (bsp_node)*MAX_BSP_NODES, CACHELINE_SIZE);
+        P32AssignP (g_fastbsp->nodes, nodes);
+        g_fastbsp->nodecount = 1;
+
+        bsp_node *fastnode = P32ToP (g_fastbsp->nodes, bsp_node) + g_fastbsp->nodecount++;
+        SetBSPType(fastnode, NodeTypeInner);
+        SetBSPDim(fastnode, makenode->dim);
+
+        // NOTE: (Kapsy) Allocate a list of accelaration structures.
+        // To keep memory offsets positive, this must be allocated after the nodes.
+        // TODO: (Kapsy) Should have an accurate triangle count here!
+        triacclist_t *triacclist = (triacclist_t *) PoolAlloc (&g_bspmempool, sizeof (triacclist_t)*MAX_BSP_NODES, CACHELINE_SIZE);
+        P32AssignP (g_fastbsp->triacclist, triacclist);
+        g_fastbsp->triacclistcount = 0;
+
+        // NOTE: (Kapsy) Allocate twice as many to account for overlap.
+        // Really need to go through a simple ex
+        // this is obviously wrong... because we are including tris that touch our boundaries...
+        g_fastbsp->triacccount = g_bspstat_NTT;// Pobject->tricount*40;
+        triacc *triaccsbase = (triacc *) PoolAlloc (&g_bspmempool, sizeof (triacc)*g_fastbsp->triacccount, CACHELINE_SIZE);
+        P32AssignP (g_fastbsp->triaccsbase, triaccsbase);
+
+        // g_fastbsp->triaccat = g_fastbsp->triaccsbase;
+        CreateFastBSPFromSlow (g_fastbsp, object, makenode, fastnode);
+
+        // DebugPrintFastBSP(&g_fastbsp, 128);
+        free (g_makenodes);
+        free (g_makenodepairs);
+
+        printf ("Create fast BSP complete!\n");
+
+        SaveFastBSP (g_fastbsp);
+
+        printf ("Save fast BSP complete!\n");
+
+        fflush (0);
+
+    }
+
+#if 0
       //////////////////////////////////////////////////////////////////////////
-     //// Setup Make BSP Tree /////////////////////////////////////////////////
+     //// Fast BSP Tree Stats /////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////
 
-    printf ("Setup Make BSP Tree\n");
-    fflush (0);
+    //what do I want to know?
+    //for each leaf, how many tris do we traverse
+    //how deep is each leaf?
 
-    numtris = object->tricount;
+    bsp_node *node = g_fastnodes + 1;
 
-    // NOTE: (Kapsy) Use system alloc for temp nodes here.
-    g_makenodes = (makenode_t *) malloc( sizeof (makenode_t)*MAX_BSP_NODES);
-    makenode_t *makenode = g_makenodes + g_makenodecount++;
+    int bspstackcount = 0;
+    stack_item bspstack[MAX_BSP_STACK_COUNT];
 
-    makenode->type = NodeTypeInner;
-    makenode->split = 0.f;
-    makenode->leftchild = 0;
-    makenode->rightchild = 0;
-    makenode->V = object->aabb;
+    unsigned int totaltris = 0;
+    unsigned int totalleaves = 0;
 
-    makenode->trilist.count = object->tricount;
-    makenode->trilist.indexes =  (int *)malloc(sizeof(int)*makenode->trilist.count);
-
-    for (int i=0 ; i<object->tricount ; i++ )
+    for(;;)
     {
-        makenode->trilist.indexes[i] = i;
+        while (!BSP_IsLeaf(node))
+        {
+            {
+                float backdir = 0.f;
+                float frontdir = 0.f;
+
+                // Case 3: Traverse both sides in turn
+                bsp_node *backchild = GetBackChild (node, backdir);
+                PushStack (bspstack, bspstackcount, backchild, 0.f, 0.f);
+
+                printf ("Fast BSP inner\n");
+                node = GetFrontChild (node, frontdir);
+            }
+        }
+
+        // NOTE: (Kapsy) We now have a leaf.
+        // Print leaf stats, tri count and depth
+        int offset = BSP_Offset(node);
+        triacclist_t *list = (triacclist_t *)((char *)node + offset);
+        printf("Fast BSP leaf tris: %d depth: %d\n", list->count, bspstackcount);
+        fflush (0);
+
+        totaltris+=list->count;
+        totalleaves++;
+
+        if (bspstackcount == 0)
+            break; // nothing left over to traverse
+
+        stack_item *stack = PopStack (bspstack, bspstackcount);
+        node = stack->node;
     }
 
-    printf ("Checking MakeBSPNode input...\n");
-
-    printf ("t:%d s:%f\n", makenode->type, makenode->split);
-
-    printf ("V min:%.03f %.03f %.03f max:%.03f %.03f %.03f\n",
-            makenode->V.min.x,
-            makenode->V.min.y,
-            makenode->V.min.z,
-            makenode->V.max.x,
-            makenode->V.max.y,
-            makenode->V.max.z);
-
-    printf ("makenode->trilist.count:%d\n", makenode->trilist.count);
-
-    MakeBSPNode(object, makenode, 0);
-
-    printf ("Leaf creation stats:\n  Hit min tri count: %d\n  Hit max BSP depth: %d\n  Best cost found: %d\n", g_mintricount, g_maxbspdepth, g_costbestfound);
-    fflush (0);
-
-
-      //////////////////////////////////////////////////////////////////////////
-     //// Make BSP Tree Stats /////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////
-
-    g_makenodepairs = (makenodepair_t *)malloc(sizeof(makenodepair_t)*MAX_BSP_DEPTH);
-    g_makenodepaircount = 0;
-
-    CollateSlowBSPDebugInfo (makenode);
-
-    // MakeManualSplitTest(mesh->tris, mesh->tricount, makenode, 0);
-
-      //////////////////////////////////////////////////////////////////////////
-     //// Setup Fast BSP Tree /////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////
-
-    printf ("Setup Fast BSP Tree\n");
-    fflush (0);
-
-    // stack used only for creation?J
-    g_makenodepaircount = 0;
-
-
-    // need sizes for all allocations? not really, as long as we have the count we should know how much to read from the file
-
-
-    g_fastbsp = (fastbsp_t *) PoolAlloc (&g_bspmempool, sizeof (*g_fastbsp), CACHELINE_SIZE);
-
-    // NOTE: (Kapsy) In order to align node pairs to cacheline boundaries,
-    // the root node must start at + 1.
-    // Ensure tri accs are pool alloc'd after the fast nodes (for offsets).
-
-    // to serialize this would need all these globals in a file
-    // could put them in a struct with some sizes, wouldn't be hard to resurrect from that.
-    // then here, we just check the existence of a file, and create if not, otherwise read in.
-    // need to make sure we alloc mem aligned when loading.
-    //
-    bsp_node *nodes = (bsp_node *) PoolAlloc (&g_bspmempool, sizeof (bsp_node)*MAX_BSP_NODES, CACHELINE_SIZE);
-    P32AssignP (g_fastbsp->nodes, nodes);
-    g_fastbsp->nodecount = 1;
-
-    bsp_node *fastnode = P32ToP (g_fastbsp->nodes, bsp_node) + g_fastbsp->nodecount++;
-    SetBSPType(fastnode, NodeTypeInner);
-    SetBSPDim(fastnode, makenode->dim);
-
-
-    // NOTE: (Kapsy) Allocate a list of accelaration structures.
-    // To keep memory offsets positive, this must be allocated after the nodes.
-    // TODO: (Kapsy) Should have an accurate triangle count here!
-    triacclist_t *triacclist = (triacclist_t *) PoolAlloc (&g_bspmempool, sizeof (triacclist_t)*MAX_BSP_NODES, CACHELINE_SIZE);
-    P32AssignP (g_fastbsp->triacclist, triacclist);
-    g_fastbsp->triacclistcount = 0;
-
-
-    // NOTE: (Kapsy) Allocate twice as many to account for overlap.
-    // Really need to go through a simple ex
-    // this is obviously wrong... because we are including tris that touch our boundaries...
-    g_fastbsp->triacccount = g_bspstat_NTT;// Pobject->tricount*40;
-    triacc *triaccsbase = (triacc *) PoolAlloc (&g_bspmempool, sizeof (triacc)*g_fastbsp->triacccount, CACHELINE_SIZE);
-    P32AssignP (g_fastbsp->triaccsbase, triaccsbase);
-
-    //g_fastbsp->triaccat = g_fastbsp->triaccsbase;
-
-
-    CreateFastBSPFromSlow (g_fastbsp, object, makenode, fastnode);
-
-//DebugPrintFastBSP(&g_fastbsp, 128);
-
-    free (g_makenodes);
-    free (g_makenodepairs);
-
-    printf ("Create fast BSP complete!\n");
-
-    SaveFastBSP (g_fastbsp);
-
-    printf ("Save fast BSP complete!\n");
-
-    fflush (0);
-
-    }
-
-    /////////////////////////////
-
-////     // NOTE: (Kapsy) In order to align node pairs to cacheline boundaries,
-////     // the root node must start at + 1.
-////     // Ensure tri accs are pool alloc'd after the fast nodes (for offsets).
-//// 
-////     // to serialize this would need all these globals in a file
-////     // could put them in a struct with some sizes, wouldn't be hard to resurrect from that.
-////     // then here, we just check the existence of a file, and create if not, otherwise read in.
-////     // need to make sure we alloc mem aligned when loading.
-////     g_fastnodes = (bsp_node *) PoolAlloc (sizeof (bsp_node)*MAX_BSP_NODES, CACHELINE_SIZE);
-////     g_fastnodecount = 1;
-////     bsp_node *fastnode = g_fastnodes + g_fastnodecount++;
-////     SetBSPType(fastnode, NodeTypeInner);
-////     SetBSPDim(fastnode, makenode->dim);
-//// 
-////     printf ("PoolAlloc g_fastnodes OK\n");
-//// 
-////     // NOTE: (Kapsy) Allocate a list of accelaration structures.
-////     // To keep memory offsets positive, this must be allocated after the nodes.
-////     // TODO: (Kapsy) Should have an accurate triangle count here!
-////     g_triacclist = (triacclist_t *) PoolAlloc (sizeof (triacclist_t)*MAX_BSP_NODES, CACHELINE_SIZE);
-////     g_triacclistcount = 0;
-//// 
-////     // NOTE: (Kapsy) Allocate twice as many to account for overlap.
-////     // Really need to go through a simple ex
-////     // this is obviously wrong... because we are including tris that touch our boundaries...
-////     g_triacccount = object->tricount*40;
-////     g_triaccsbase = (triacc *) PoolAlloc (sizeof (triacc)*g_triacccount, CACHELINE_SIZE);
-////     g_triaccat = g_triaccsbase;
-//// 
-////     g_triaccindexes = (int *) malloc (sizeof (int)*g_triacccount);
-////     g_triaccindexat = g_triaccindexes;
-//// 
-////     CreateFastBSPFromSlow (object, makenode, fastnode);
-//// 
-////     // DebugPrintFastBSP(fastnode);
-//// 
-////     free (g_makenodes);
-////     free (g_makenodepairs);
-//// 
-////     printf ("Create fast BSP complete!\n");
-////     fflush (0);
-//// 
-////     // write to the cached bsp here...
-
-
-////      //////////////////////////////////////////////////////////////////////////
-////     //// Fast BSP Tree Stats /////////////////////////////////////////////////
-////    //////////////////////////////////////////////////////////////////////////
-////
-////    //what do I want to know?
-////    //for each leaf, how many tris do we traverse
-////    //how deep is each leaf?
-////
-////    bsp_node *node = g_fastnodes + 1;
-////
-////    int bspstackcount = 0;
-////    stack_item bspstack[MAX_BSP_STACK_COUNT];
-////
-////    unsigned int totaltris = 0;
-////    unsigned int totalleaves = 0;
-////
-////    for(;;)
-////    {
-////        while (!BSP_IsLeaf(node))
-////        {
-////            {
-////                float backdir = 0.f;
-////                float frontdir = 0.f;
-////
-////                // Case 3: Traverse both sides in turn
-////                bsp_node *backchild = GetBackChild (node, backdir);
-////                PushStack (bspstack, bspstackcount, backchild, 0.f, 0.f);
-////
-////                printf ("Fast BSP inner\n");
-////                node = GetFrontChild (node, frontdir);
-////            }
-////        }
-////
-////        // NOTE: (Kapsy) We now have a leaf.
-////        // Print leaf stats, tri count and depth
-////        int offset = BSP_Offset(node);
-////        triacclist_t *list = (triacclist_t *)((char *)node + offset);
-////        printf("Fast BSP leaf tris: %d depth: %d\n", list->count, bspstackcount);
-////        fflush (0);
-////
-////        totaltris+=list->count;
-////        totalleaves++;
-////
-////        if (bspstackcount == 0)
-////            break; // nothing left over to traverse
-////
-////        stack_item *stack = PopStack (bspstack, bspstackcount);
-////        node = stack->node;
-////    }
-////
-////        printf("Fast total leaves: %d tris: %d\n", totalleaves, totaltris);
-////        fflush (0);
-
-
-
-
-
-
+        printf("Fast total leaves: %d tris: %d\n", totalleaves, totaltris);
+        fflush (0);
+#endif
 
 #if CAMERA_TEST
 
@@ -6566,58 +6007,51 @@ int main(int argc, char **argv)
 #endif
 
       //////////////////////////////////////////////////////////////////////////
-     //// Animation Setup /////////////////////////////////////////////////
+     //// Animation Setup /////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////
 
     float framerate = 60.f;
-    //float framerate = 30.f;
-    //float framerate = 15.f;
-    //float framerate = 1.f;
-    //float framerate = 12.f/9.f;
+    // float framerate = 30.f;
+    // float framerate = 15.f;
+    // float framerate = 1.f;
+    // float framerate = 12.f/9.f;
 
     float frametime = 1.f/framerate;
     float shuttertime = frametime;
-    //float shuttertime = 0.f;
-
-    //float shuttertime = 1.f/60.f;
+    // float shuttertime = 0.f;
 
     float durations = 9.f;
     float framecount = framerate*durations;
-
     float rotspeed = (2.f*M_PI)/durations;
-
-    //float ellipsephase = 0;
+    // float ellipsephase = 0;
 
 #if SINGLE_FRAME_TEST
     framecount = 1;
 #endif
 
+    // Retina
     // 2880/1800 1.6:1
 
     // int nx = 2880;
     // int ny = 1800;
 
-
-    // NOTE: (Kapsy) HD
-    //int nx = 1920;
-    //int ny = 1080;
+    // HD
+    // int nx = 1920;
+    // int ny = 1080;
 
     // Close to HD
     int nx = (1 << 11);
     int ny = (1 << 10);
 
-    //int nx = (1 << 10);
-    //int ny = (1 << 10);
+    // int nx = (1 << 10);
+    // int ny = (1 << 10);
 
-    //int nx = (1 << 10);
-    //int ny = (1 << 9);
+    // int nx = (1 << 10);
+    // int ny = (1 << 9);
 
-    //int nx = 240;
-    //int ny = 140;
+    // int nx = 240;
+    // int ny = 140;
 
-    // don't actually need this check.
-    // but would have to store the buffer width and screen width seperately
-    // we actually already do!
     Assert((nx & (SIMD_WIDTH - 1)) == 0);
     Assert((ny & (SIMD_WIDTH - 1)) == 0);
 
@@ -6627,11 +6061,10 @@ int main(int argc, char **argv)
     int chunkx = (int)ceil((float)nx/(float)chunkdim);
     int chunky = (int)ceil((float)ny/(float)chunkdim);
 
-/// #if SIMD_PACKET_1X4
-///     g_screenbuffer.w = nx + (nx & (SIMD_WIDTH - 1));
-///     g_screenbuffer.h = ny;//+ (ny & (SIMD_WIDTH - 1));
+// #if SIMD_PACKET_1X4
+//     g_screenbuffer.w = nx + (nx & (SIMD_WIDTH - 1));
+//     g_screenbuffer.h = ny;//+ (ny & (SIMD_WIDTH - 1));
 
-    // for 2x2
 #if SIMD_PACKET_2X2
     int w = nx + (nx & 1);
     int h = ny + (ny & 1);
@@ -6666,7 +6099,6 @@ int main(int argc, char **argv)
     g_pixelbuffers[NORMAL_INDEX].postfix = "normal";
 #endif
 
-
       //////////////////////////////////////////////////////////////////////////
      //// Setup Job Queue /////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////
@@ -6688,7 +6120,7 @@ int main(int argc, char **argv)
         int result = pthread_create (&pthread, 0, ThreadProc, 0);
         Assert (result == 0);
 
-        ///IOProcThreadPolicySet = 1;
+        // IOProcThreadPolicySet = 1;
         thread_affinity_policy_data_t policy = {};
         policy.affinity_tag = (int)(i);
         int res = thread_policy_set (pthread_mach_thread_np (pthread), THREAD_AFFINITY_POLICY, (thread_policy_t) &policy, THREAD_AFFINITY_POLICY_COUNT);
@@ -6710,7 +6142,6 @@ int main(int argc, char **argv)
 
     long long StartCount = rdtsc();
 
-
     // NOTE: (Kapsy) Setup the camera.
     camera cam;
 
@@ -6731,13 +6162,6 @@ int main(int argc, char **argv)
     float vfov = 60.f;
     float aspect = (float)nx/(float)ny;
 
-    //float aperture = 0.031f;
-    //float aperture = 0.061f;
-    //float aperture = 0.091f;
-    //float aperture = 0.3f;
-    //
-    //float aperture = 0.1333f;
-    //float aperture = 0.0633f;
     float aperture = 0.0733f;
 
     float focusdist = Length (lookfrom - lookat);
@@ -6764,18 +6188,17 @@ int main(int argc, char **argv)
     //float focusupdaterate = 0.f;
 
 
-//#define RENDER_FRAMES ((f == 0) || (f == 80) || (f == 98) || (f == 160) || (f == 260) || (f == 360) || (f == 490))
-//#define RENDER_FRAMES ((f == 140) || (f == 360))
-//#define RENDER_FRAMES ((f >= 0) && (f < 10))
-
-//#define RENDER_FRAMES ((f == 91))
-//#define RENDER_FRAMES ((f == 140))
-//#define RENDER_FRAMES ((f == 20))
-//#define RENDER_FRAMES ((f == 43))
-//#define RENDER_FRAMES (((f%40) == 0))
-//#define RENDER_FRAMES ((f == 482))
-//#define RENDER_FRAMES ((f == 135))
-//#define RENDER_FRAMES ((f == 0))
+// #define RENDER_FRAMES ((f == 0) || (f == 80) || (f == 98) || (f == 160) || (f == 260) || (f == 360) || (f == 490))
+// #define RENDER_FRAMES ((f == 140) || (f == 360))
+// #define RENDER_FRAMES ((f >= 0) && (f < 10))
+// #define RENDER_FRAMES ((f == 91))
+// #define RENDER_FRAMES ((f == 140))
+// #define RENDER_FRAMES ((f == 20))
+// #define RENDER_FRAMES ((f == 43))
+// #define RENDER_FRAMES (((f%40) == 0))
+// #define RENDER_FRAMES ((f == 482))
+// #define RENDER_FRAMES ((f == 135))
+// #define RENDER_FRAMES ((f == 0))
 #define RENDER_FRAMES ((1))
 
     g_stratanglecount = ny*nx*g_rppcount;
@@ -6825,35 +6248,25 @@ int main(int argc, char **argv)
 
         float tdelta = g_rppinv*shuttertime;
 
-        //// int stratanglessize = sizeof (g_stratangles[0])*g_rppcount;
-        //// float *stratangles = (float *) malloc (stratanglessize);
-        //// memcpy ((void *) stratangles, (void *) g_stratangles, stratanglessize);
-        //// int stratcount = g_rppcount;
-
         for (int rppy=0 ; rppy<g_rppy ; rppy++)
         {
             for (int rppx=0 ; rppx<g_rppx ; rppx++)
             {
-
-                // this should update the camera, autofocus, cam rotation, etc for t
-                // don't need a global t yet...
-
                 SimulateScene (tdelta, cam, object, g_fastbsp, nx, ny, lookfrom, lookat, focusdist, targetfocusdist, vup, halfwidth, halfheight, rotspeed);
 
-                //////////////////////////////////////////////////////////////////
-                //// Render Motion Distributed Rays //////////////////////////////
-                //////////////////////////////////////////////////////////////////
+                  //////////////////////////////////////////////////////////////
+                 //// Render Motion Distributed Rays //////////////////////////
+                //////////////////////////////////////////////////////////////
 
                 if (RENDER_FRAMES)
                 {
                     float stratposx = ((float)rppx)*g_stratdimx;
-                    // Okay thinking we might have to invert these because we start from the bottom of the pixel and go to the top
+                    // Okay thinking we might have to invert these because we start from the bottom of the pixel and go to the top.
                     float stratposy = ((float)rppy)*g_stratdimy;
 
-                    //float lensstratangle = ((float)(rppy*g_rppx + rppx)/(float)g_rppcount)*2.f*M_PI;
-
-
-                    // might be better to shuffle the table every frame?
+                    // float lensstratangle = ((float)(rppy*g_rppx + rppx)/(float)g_rppcount)*2.f*M_PI;
+                    // Might be better to shuffle the table every frame?
+                    //
                     //// int stratindex = (int)(drand48 ()*(float)(stratcount - 1));
                     //// float lensstratangle = stratangles[stratindex];
                     //// stratangles[stratindex] = stratangles[stratcount - 1];
@@ -6876,17 +6289,17 @@ int main(int argc, char **argv)
                         int remainingw = g_pixelbuffers[COLOR_INDEX].w;
                         for (int q=0 ; q<chunkx ; q++)
                         {
-                            // allocate these before render and reuse
+                            // Allocate these before render and reuse.
                             renderchunkdata_t *chunk = chunkat++;
 
-                            // need to assert remainings are % SIMD_WIDTH?
-                            // should always be tho, as the buffer will be.
+                            // Need to assert remainings are % SIMD_WIDTH?
+                            // Should always be though, as the buffer will be.
                             chunk->dimx = min (remainingw, chunkdim);
                             chunk->dimy = min (remainingh, chunkdim);
                             chunk->starty = p*chunkdim;
                             chunk->startx = q*chunkdim;
                             chunk->object = object;
-                            // do we need this if global anyway? could save on the pointer!
+                            // Do we need this if global anyway? Could save on the pointer!
                             chunk->buffers = g_pixelbuffers;
 
                             chunk->nx = nx;
@@ -6917,9 +6330,9 @@ int main(int argc, char **argv)
             }
         }
 
-        ////////////////////////////////////////////////////////////////////////
-        //// Denoising /////////////////////////////////////////////////////////
-        ////////////////////////////////////////////////////////////////////////
+          //////////////////////////////////////////////////////////////////////
+         //// Denoising ///////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////
 
         unsigned int w = g_pixelbuffers[COLOR_INDEX].w;
         unsigned int h = g_pixelbuffers[COLOR_INDEX].h;
@@ -6937,6 +6350,7 @@ int main(int argc, char **argv)
             oidnSetSharedFilterImage(filter, "output", g_pixelbuffers[OUTPUT_INDEX].data, OIDN_FORMAT_FLOAT3, w, h, 0, 0, 0);
             oidnSetFilter1b(filter, "hdr", false); // image is HDR
             oidnCommitFilter(filter);
+
             // Filter the image
             oidnExecuteFilter(filter);
 
@@ -6947,6 +6361,7 @@ int main(int argc, char **argv)
                 printf ("Error: %s\n", errorMessage);
                 return (EXIT_FAILURE);
             }
+
             // Cleanup
             oidnReleaseFilter(filter);
             oidnReleaseDevice(device);
@@ -6955,15 +6370,15 @@ int main(int argc, char **argv)
             fflush (0);
         }
 
-        ////////////////////////////////////////////////////////////////////////
-        //// Tone Mapping //////////////////////////////////////////////////////
-        ////////////////////////////////////////////////////////////////////////
+          //////////////////////////////////////////////////////////////////////
+         //// Tone Mapping ////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////
 
-        // could do other post stuff here too...
+        // NOTE: (Kapsy) Could do other post stuff here too...
         if (RENDER_FRAMES)
         {
             {
-                // trying square chunks, although might be better to do things by line.
+                // NOTE: (Kapsy) Trying square chunks, although might be better to do things by line.
                 // need to try both.
                 renderchunkdata_t *chunkat = g_renderchunks;
 
@@ -6976,11 +6391,11 @@ int main(int argc, char **argv)
                     int remainingw = g_pixelbuffers[COLOR_INDEX].w;
                     for (int q=0 ; q<chunkx ; q++)
                     {
-                        // allocate these before render and reuse
+                        // Allocate these before render and reuse.
                         renderchunkdata_t *chunk = chunkat++;
 
-                        // need to assert remainings are % SIMD_WIDTH?
-                        // should always be tho, as the buffer will be.
+                        // Need to assert remainings are % SIMD_WIDTH?
+                        // Should always be though, as the buffer will be.
                         chunk->dimx = min (remainingw, chunkdim);
                         chunk->dimy = min (remainingh, chunkdim);
                         chunk->starty = p*chunkdim;
@@ -7008,8 +6423,8 @@ int main(int argc, char **argv)
             fflush (0);
 
 
-            //////////////////////////////////////////////////////////////////
-            //// Write Image /////////////////////////////////////////////////
+              //////////////////////////////////////////////////////////////////
+             //// Write Image /////////////////////////////////////////////////
             //////////////////////////////////////////////////////////////////
 
             for (int i=0 ; i<BUFFER_COUNT ; i++)
